@@ -4,9 +4,7 @@
 bin/
 obj/
 dist/
-out/
 .vs/
 *.user
-.claude/
 sample/**/*.gcov
 sample/*.gcov

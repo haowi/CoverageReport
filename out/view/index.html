@@ -1,0 +1,236 @@
+<!doctype html><!-- Coverage Report -->
+<html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-bshEaxoVe514wje4PBxFB9l3QDCgvzBZCJqXkjBcDEQ='; script-src 'sha256-MdsFIBrf/VIaD99Xe68GUlDckdEnmnv9uolzdtBD7Gk='; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Demo Firmware 4.2 - Coverage summary</title><style>/* SPDX-FileCopyrightText: 2026 Hanno Witt */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+:root {
+  --ink: #0A0F14;
+  --deep: #0F3D3E;
+  --teal: #2E6F73;
+  --mist: #7FB3B8;
+  --sand: #EADCC8;
+  --rust: #C6601F;
+  --rust-ink: #A34E18;
+  --line: #E3E8E9;
+  --hit-bg: #E8F1F2;
+  --part-bg: #F7F1E8;
+  --part: #B39B78;
+  --miss-bg: #FAEBDD;
+  --mono: "Cascadia Code", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: #fff; color: var(--ink); font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+a { color: var(--teal); text-underline-offset: 2px; }
+a:hover { color: var(--deep); }
+:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; border-radius: 3px; }
+
+.top { display: flex; align-items: center; gap: 18px; padding: 14px 32px; border-top: 4px solid var(--rust); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; letter-spacing: -.01em; color: var(--deep); }
+.project { min-width: 0; padding-left: 18px; border-left: 1px solid var(--line); color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.back { color: var(--teal); text-decoration: none; }
+.back:hover { text-decoration: underline; }
+
+main { max-width: 1240px; margin: 0 auto; padding: 32px 32px 24px; }
+.title { margin-bottom: 26px; }
+h1 { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.meta { margin: 4px 0 0; color: var(--teal); overflow-wrap: anywhere; }
+.meta.path, .meta .path { font: 12.5px/1.5 var(--mono); }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 24px 0; margin: 0 0 36px; }
+.kpi { min-width: 0; padding: 0 22px; border-left: 1px solid var(--line); }
+.kpi:first-child { padding-left: 0; border-left: 0; }
+.kpi dd { margin: 0; }
+.kpi dt { color: var(--teal); font-size: 13px; }
+.kpi-value { margin: 2px 0 8px !important; font-size: 32px; font-weight: 650; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.kpi-value.na { color: var(--teal); font-weight: 400; }
+.kpi-bar { line-height: 0; margin-bottom: 8px !important; }
+.kpi-bar svg { max-width: 100%; }
+.kpi-detail { color: var(--teal); font-size: 12.5px; line-height: 1.45; }
+.kpi-detail + .kpi-detail { margin-top: 4px !important; color: var(--rust-ink); }
+.kpi-detail.kpi-legend { color: var(--teal); }
+
+section { margin-bottom: 36px; }
+.section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
+h2 { margin: 0; font-size: 16px; font-weight: 650; color: var(--deep); }
+.scroll { overflow-x: auto; }
+.hint { margin: 10px 0 0; color: var(--teal); font-size: 12.5px; }
+
+.risk { padding: 18px 22px; background: var(--part-bg); border-radius: 10px; }
+.risk table.plain td, .risk table.plain th { border-bottom-color: var(--sand); }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.toolbar button { padding: 4px 11px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--teal); font: inherit; font-size: 13px; cursor: pointer; }
+.toolbar button:hover { border-color: var(--teal); color: var(--deep); }
+.toolbar label { display: inline-flex; align-items: center; gap: 7px; color: var(--teal); font-size: 13px; }
+.toolbar input { width: 220px; max-width: 100%; padding: 4px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; }
+.toolbar input:focus { border-color: var(--teal); }
+
+table { border-collapse: collapse; }
+table.cov { width: 100%; font-variant-numeric: tabular-nums; }
+table.cov th, table.cov td { padding: 7px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+table.cov thead th { padding-top: 4px; color: var(--teal); font-size: 12.5px; font-weight: 600; border-bottom: 1px solid var(--mist); }
+table.cov .name { text-align: left; white-space: normal; overflow-wrap: anywhere; min-width: 220px; padding-left: 0; }
+table.cov tr.dir th, table.cov tr.dir td { padding-top: 14px; font-weight: 600; border-bottom: 1px solid var(--mist); }
+table.cov tr.dir .name { font: 600 12.5px/1.45 var(--mono); color: var(--deep); }
+table.cov tr.file .name { padding-left: 18px; font: 12.5px/1.45 var(--mono); }
+table.cov tr.file:hover td { background: var(--hit-bg); }
+th button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+th button:hover { color: var(--rust-ink); }
+th[aria-sort="ascending"] button::after { content: " \2191"; }
+th[aria-sort="descending"] button::after { content: " \2193"; }
+.dir .toggle { text-align: left; overflow-wrap: anywhere; }
+tr.collapsed .toggle::before { content: "\25B8\00A0"; }
+tr:not(.collapsed) .toggle::before { content: "\25BE\00A0"; }
+.na { color: var(--mist); font-weight: 400 !important; }
+.pct { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.pct svg { flex: none; }
+.count { color: var(--teal); font-size: 12px; font-weight: 400; }
+
+.chart { max-width: 980px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; color: var(--teal); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 26px; }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--teal); font-size: 13px; }
+
+table.plain { width: 100%; margin-top: 2px; font-variant-numeric: tabular-nums; }
+table.plain th, table.plain td { padding: 6px 12px 6px 0; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+table.plain tr:last-child td { border-bottom: 0; }
+table.plain thead th { color: var(--teal); font-size: 12.5px; font-weight: 600; border-bottom-color: var(--mist); }
+table.plain .left { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+td.fn { font: 12.5px/1.45 var(--mono); min-width: 220px; }
+td.hot { color: var(--rust-ink); font-weight: 700; }
+.status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.status.full::before { background: var(--deep); }
+.status.part::before { background: var(--mist); }
+.status.none::before { background: var(--rust); }
+
+.warn { margin: 0 0 12px; padding: 9px 12px; border-radius: 7px; background: var(--miss-bg); overflow-wrap: anywhere; }
+table.source { width: 100%; font: 12.5px/1.6 var(--mono); border-top: 1px solid var(--mist); }
+table.source th { padding: 6px 10px; color: var(--teal); border-bottom: 1px solid var(--line); font: 600 12.5px "Segoe UI", system-ui, Arial, sans-serif; text-align: right; white-space: nowrap; }
+table.source th:last-child { text-align: left; }
+table.source td { padding: 0 10px; vertical-align: top; }
+table.source .num, table.source .hits, table.source .brc { width: 1%; text-align: right; white-space: nowrap; color: var(--mist); user-select: none; }
+table.source .num { color: var(--teal); border-right: 1px solid var(--line); }
+table.source .code { white-space: pre; color: var(--teal); padding-left: 14px; }
+tr.hit .hits { box-shadow: inset 3px 0 0 var(--teal); }
+tr.miss .hits { box-shadow: inset 3px 0 0 var(--rust); }
+tr.part .hits { box-shadow: inset 3px 0 0 var(--part); }
+tr.hit td { background: var(--hit-bg); }
+tr.miss td { background: var(--miss-bg); }
+tr.part td { background: var(--part-bg); }
+tr.hit .code, tr.miss .code, tr.part .code { color: var(--ink); }
+table.source tr.hit .hits, table.source tr.miss .hits, table.source tr.part .hits { color: var(--ink); font-weight: 600; }
+tr:target td { outline: 1px solid var(--rust); outline-offset: -1px; }
+.badge { display: inline-block; padding: 0 6px; border-radius: 9px; background: #fff; border: 1px solid var(--sand); color: var(--deep); font-size: 11px; line-height: 16px; }
+
+footer { max-width: 1240px; margin: 0 auto; padding: 14px 32px 28px; color: var(--teal); font-size: 12.5px; border-top: 1px solid var(--line); }
+
+@media (max-width: 640px) {
+  .top { padding: 12px 16px; }
+  main { padding: 20px 16px 16px; }
+  footer { padding: 14px 16px 20px; }
+  h1 { font-size: 23px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 0; }
+  .kpi { padding: 0 12px; }
+  .kpi-value { font-size: 26px; }
+  .risk { padding: 14px; }
+  .toolbar input { width: 100%; }
+  .toolbar label { flex: 1 1 100%; }
+}
+</style></head><body><header class="top"><span class="brand">Coverage Report</span></header><main><div class="title"><h1>Demo Firmware 4.2</h1><p class="meta">Coverage summary &middot; Files: 5 &middot; Without coverage data: 2 &middot; Parsed reports: 2 &middot; 2026-11-04 20:15:37</p></div><dl class="kpis"><div class="kpi"><dt>Line coverage</dt><dd class="kpi-value">80.5%</dd><dd class="kpi-bar"><svg width="140" height="6" aria-hidden="true"><rect width="140" height="6" rx="3" fill="#EADCC8"/><rect width="112.8" height="6" rx="3" fill="#0F3D3E"/></svg></dd><dd class="kpi-detail">54 of 67 coverable lines, 13 uncovered</dd></div><div class="kpi"><dt>Branch coverage</dt><dd class="kpi-value">50%</dd><dd class="kpi-bar"><svg width="140" height="6" aria-hidden="true"><rect width="140" height="6" rx="3" fill="#EADCC8"/><rect width="70" height="6" rx="3" fill="#7FB3B8"/></svg></dd><dd class="kpi-detail">32 of 64 branches</dd></div><div class="kpi"><dt>Method coverage</dt><dd class="kpi-value">78.5%</dd><dd class="kpi-bar"><svg width="140" height="6" aria-hidden="true"><rect width="140" height="6" rx="3" fill="#EADCC8"/><rect width="110" height="6" rx="3" fill="#7FB3B8"/></svg></dd><dd class="kpi-detail">11 of 14 methods, 6 fully (42.8%)</dd></div><div class="kpi"><dt>Lines of code</dt><dd class="kpi-value">133</dd><dd class="kpi-detail">179 lines in total</dd></div><div class="kpi"><dt>Complexity (CCM)</dt><dd class="kpi-value">23</dd><dd class="kpi-detail">12 functions, average 1.9, highest 4</dd><dd class="kpi-detail kpi-legend">CCM is the cyclomatic complexity after McCabe; above 10 is marked.</dd></div><div class="kpi"><dt>Highest CRAP score</dt><dd class="kpi-value">12</dd><dd class="kpi-detail">0 of 10 functions above 30</dd><dd class="kpi-detail kpi-legend">CRAP = CCM² × (1 − line coverage)³ + CCM: complexity weighs heavily where tests are missing. Above 30 is marked as risky.</dd></div></dl><section class="risk"><div class="section-head"><h2>Riskiest functions</h2></div><div class="scroll"><table class="plain"><thead><tr><th class="left">Function</th><th class="left">File</th><th>CRAP</th><th>CCM</th><th>LOC</th><th>Line coverage</th></tr></thead><tbody><tr><td class="left fn"><a href="f_051981fa8d5ba1fb.html#L29">demo::Tokenizer::count</a></td><td class="left fn">/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/tokenizer.cpp</td><td>12</td><td>3</td><td>10</td><td>0%</td></tr><tr><td class="left fn"><a href="f_1ed64427ece4c033.html#L6">clamp</a></td><td class="left fn">/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/mathutil.c</td><td>3</td><td>3</td><td>10</td><td>83.3%</td></tr><tr><td class="left fn"><a href="f_7b3a8f08345c3975.html#L9">main</a></td><td class="left fn">/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/main.cpp</td><td>3</td><td>3</td><td>19</td><td>94.1%</td></tr><tr><td class="left fn"><a href="f_a47f2f4221a1e32f.html#L18">demo::Stack::pop</a></td><td class="left fn">/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/stack.hpp</td><td>2</td><td>2</td><td>9</td><td>83.3%</td></tr><tr><td class="left fn"><a href="f_1ed64427ece4c033.html#L28">unused_add</a></td><td class="left fn">/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/mathutil.c</td><td>2</td><td>1</td><td>4</td><td>0%</td></tr></tbody></table></div><p class="hint">Ranked by CRAP score. CRAP = CCM² × (1 − line coverage)³ + CCM: complexity weighs heavily where tests are missing. Above 30 is marked as risky. CCM is the cyclomatic complexity after McCabe; above 10 is marked.</p></section><section><div class="section-head"><h2>Files</h2><div class="toolbar"><label>Filter <input id="filter" type="search" autocomplete="off" placeholder="Part of a path"></label><button type="button" id="collapse">Collapse all</button><button type="button" id="expand">Expand all</button></div></div><div class="scroll"><table class="cov" id="files"><thead><tr><th class="name" data-col="0" aria-sort="none"><button type="button">Name</button></th><th data-col="1" aria-sort="none"><button type="button">Line</button></th><th data-col="2" aria-sort="none"><button type="button">Branch</button></th><th data-col="3" aria-sort="none"><button type="button">Method</button></th><th data-col="4" aria-sort="none"><button type="button">Functions</button></th><th data-col="5" aria-sort="none"><button type="button">LOC</button></th><th data-col="6" aria-sort="none"><button type="button">CCM</button></th><th data-col="7" aria-sort="none"><button type="button">CRAP</button></th></tr></thead><tbody><tr class="dir"><th scope="rowgroup" class="name" data-v="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src"><button type="button" class="toggle" aria-expanded="true">/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src</button></th><td data-v="81.356"><div class="pct"><span>81.3%</span><span class="count">48/59</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="52.1" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="50"><div class="pct"><span>50%</span><span class="count">31/62</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="32" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="83.333" title="6 fully covered"><div class="pct"><span>83.3%</span><span class="count">10/12</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="53.3" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="12">12</td><td data-v="116">116</td><td data-v="23">23</td><td data-v="12">12</td></tr><tr class="file" data-path="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/main.cpp"><td class="name" data-v="main.cpp" title="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/main.cpp"><a href="f_7b3a8f08345c3975.html">main.cpp</a></td><td data-v="94.118"><div class="pct"><span>94.1%</span><span class="count">16/17</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="60.2" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="47.222"><div class="pct"><span>47.2%</span><span class="count">17/36</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="30.2" height="6" rx="3" fill="#C6601F"/></svg></div></td><td data-v="100" title="0 fully covered"><div class="pct"><span>100%</span><span class="count">1/1</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="64" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="1">1</td><td data-v="22">22</td><td data-v="3">3</td><td data-v="3">3</td></tr><tr class="file" data-path="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/mathutil.c"><td class="name" data-v="mathutil.c" title="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/mathutil.c"><a href="f_1ed64427ece4c033.html">mathutil.c</a></td><td data-v="78.571"><div class="pct"><span>78.5%</span><span class="count">11/14</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="50.3" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="83.333"><div class="pct"><span>83.3%</span><span class="count">5/6</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="53.3" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="66.667" title="1 fully covered"><div class="pct"><span>66.6%</span><span class="count">2/3</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="42.7" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="3">3</td><td data-v="24">24</td><td data-v="6">6</td><td data-v="3">3</td></tr><tr class="file" data-path="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/stack.hpp"><td class="name" data-v="stack.hpp" title="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/stack.hpp"><a href="f_a47f2f4221a1e32f.html">stack.hpp</a></td><td data-v="85.714"><div class="pct"><span>85.7%</span><span class="count">6/7</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="54.9" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="25"><div class="pct"><span>25%</span><span class="count">1/4</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="16" height="6" rx="3" fill="#C6601F"/></svg></div></td><td data-v="100" title="2 fully covered"><div class="pct"><span>100%</span><span class="count">4/4</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="64" height="6" rx="3" fill="#0F3D3E"/></svg></div></td><td data-v="4">4</td><td data-v="35">35</td><td data-v="5">5</td><td data-v="2">2</td></tr><tr class="file" data-path="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/tokenizer.cpp"><td class="name" data-v="tokenizer.cpp" title="/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/tokenizer.cpp"><a href="f_051981fa8d5ba1fb.html">tokenizer.cpp</a></td><td data-v="71.429"><div class="pct"><span>71.4%</span><span class="count">15/21</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="45.7" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="50"><div class="pct"><span>50%</span><span class="count">8/16</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="32" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="75" title="3 fully covered"><div class="pct"><span>75%</span><span class="count">3/4</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="48" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="4">4</td><td data-v="35">35</td><td data-v="9">9</td><td data-v="12">12</td></tr></tbody><tbody><tr class="dir"><th scope="rowgroup" class="name" data-v="C:/Users/Hanno/AppData/Local/Temp/claude/C--Users-Hanno--claude-spares-spare-OazCk9/49226dc5-6aeb-43fe-b8f1-203f582d9000/scratchpad/demo/fw"><button type="button" class="toggle" aria-expanded="true">C:/Users/Hanno/AppData/Local/Temp/claude/C--Users-Hanno--claude-spares-spare-OazCk9/49226dc5-6aeb-43fe-b8f1-203f582d9000/scratchpad/demo/fw</button></th><td data-v="75"><div class="pct"><span>75%</span><span class="count">6/8</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="48" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="50"><div class="pct"><span>50%</span><span class="count">1/2</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="32" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="50" title="0 fully covered"><div class="pct"><span>50%</span><span class="count">1/2</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="32" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="-1" class="na">n/a</td><td data-v="17">17</td><td data-v="-1" class="na">n/a</td><td data-v="-1" class="na">n/a</td></tr><tr class="file" data-path="C:/Users/Hanno/AppData/Local/Temp/claude/C--Users-Hanno--claude-spares-spare-OazCk9/49226dc5-6aeb-43fe-b8f1-203f582d9000/scratchpad/demo/fw/startup.S"><td class="name" data-v="startup.S" title="C:/Users/Hanno/AppData/Local/Temp/claude/C--Users-Hanno--claude-spares-spare-OazCk9/49226dc5-6aeb-43fe-b8f1-203f582d9000/scratchpad/demo/fw/startup.S"><a href="f_ff82fb668bbc6ed6.html">startup.S</a></td><td data-v="75"><div class="pct"><span>75%</span><span class="count">6/8</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="48" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="50"><div class="pct"><span>50%</span><span class="count">1/2</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="32" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="50" title="0 fully covered"><div class="pct"><span>50%</span><span class="count">1/2</span><svg width="64" height="6" aria-hidden="true"><rect width="64" height="6" rx="3" fill="#EADCC8"/><rect width="32" height="6" rx="3" fill="#7FB3B8"/></svg></div></td><td data-v="-1" class="na">n/a</td><td data-v="17">17</td><td data-v="-1" class="na">n/a</td><td data-v="-1" class="na">n/a</td></tr></tbody></table></div><p class="hint">Bars: dark teal from 80 %, light teal from 50 %, orange below. CRAP shows the highest score of a function in the file or folder. CRAP = CCM² × (1 − line coverage)³ + CCM: complexity weighs heavily where tests are missing. Above 30 is marked as risky.</p></section><section><div class="section-head"><h2>Files without coverage data</h2></div><p class="meta">2 files in the --source-dir folders that no coverage file lists: not built with coverage, or no test ran them. They do not count in any total. Paths below <span class="path">C:\Users\Hanno\AppData\Local\Temp\claude\C--Users-Hanno--claude-spares-spare-OazCk9\49226dc5-6aeb-43fe-b8f1-203f582d9000\scratchpad\demo\fw</span>.</p><div class="scroll"><table class="plain"><thead><tr><th class="left">File</th><th>LOC</th></tr></thead><tbody><tr><td class="left fn">flash.asm</td><td>5</td></tr><tr><td class="left fn">unused.c</td><td>4</td></tr></tbody></table></div></section></main><footer>Generated by Coverage Report 2.0.0 &middot; 2026-11-04 20:15:37 &middot; Copyright © 2026 Hanno Witt</footer><script>// SPDX-FileCopyrightText: 2026 Hanno Witt
+// SPDX-License-Identifier: Apache-2.0
+
+// Filtering, sorting and collapsing of the file table on the summary page.
+(function () {
+  "use strict";
+  var table = document.getElementById("files");
+  if (!table) return;
+  var filter = document.getElementById("filter");
+  var groups = Array.prototype.slice.call(table.tBodies);
+
+  function fileRows(group) {
+    return Array.prototype.slice.call(group.rows, 1);
+  }
+
+  function apply() {
+    var query = filter.value.trim().toLowerCase();
+    groups.forEach(function (group) {
+      var collapsed = group.rows[0].classList.contains("collapsed");
+      var any = false;
+      fileRows(group).forEach(function (row) {
+        var match = row.getAttribute("data-path").toLowerCase().indexOf(query) !== -1;
+        any = any || match;
+        row.hidden = !match || (collapsed && !query);
+      });
+      group.hidden = !any;
+    });
+  }
+
+  function setCollapsed(row, collapsed) {
+    row.classList.toggle("collapsed", collapsed);
+    row.querySelector(".toggle").setAttribute("aria-expanded", collapsed ? "false" : "true");
+  }
+
+  // "n/a" is stored as -1 and sorts after every value in either direction.
+  function compare(a, b, column, direction) {
+    var x = a.cells[column].getAttribute("data-v");
+    var y = b.cells[column].getAttribute("data-v");
+    if (column === 0) return direction * x.localeCompare(y);
+    x = Number(x);
+    y = Number(y);
+    if (x === -1 || y === -1) return x === y ? 0 : x === -1 ? 1 : -1;
+    return direction * (x - y);
+  }
+
+  function sort(th) {
+    var column = Number(th.getAttribute("data-col"));
+    var direction = th.getAttribute("aria-sort") === "ascending" ? -1 : 1;
+    table.querySelectorAll("th[aria-sort]").forEach(function (other) {
+      other.setAttribute("aria-sort", "none");
+    });
+    th.setAttribute("aria-sort", direction === 1 ? "ascending" : "descending");
+    groups.sort(function (a, b) {
+      return compare(a.rows[0], b.rows[0], column, direction);
+    });
+    groups.forEach(function (group) {
+      table.appendChild(group);
+      fileRows(group)
+        .sort(function (a, b) {
+          return compare(a, b, column, direction);
+        })
+        .forEach(function (row) {
+          group.appendChild(row);
+        });
+    });
+  }
+
+  filter.addEventListener("input", apply);
+  table.querySelectorAll("th[data-col] button").forEach(function (button) {
+    button.addEventListener("click", function () {
+      sort(button.parentNode);
+    });
+  });
+  groups.forEach(function (group) {
+    group.querySelector(".toggle").addEventListener("click", function () {
+      setCollapsed(group.rows[0], !group.rows[0].classList.contains("collapsed"));
+      apply();
+    });
+  });
+  function setAll(collapsed) {
+    groups.forEach(function (group) {
+      setCollapsed(group.rows[0], collapsed);
+    });
+    apply();
+  }
+  document.getElementById("collapse").addEventListener("click", function () {
+    setAll(true);
+  });
+  document.getElementById("expand").addEventListener("click", function () {
+    setAll(false);
+  });
+})();
+</script></body></html>
