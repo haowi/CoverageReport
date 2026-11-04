@@ -1,0 +1,32 @@
+        -:    0:Source:/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/main.cpp
+        -:    1:// SPDX-FileCopyrightText: 2026 Hanno Witt
+        -:    2:// SPDX-License-Identifier: Apache-2.0
+        -:    3:
+        -:    4:#include <cstdio>
+        -:    5:
+        -:    6:#include "mathutil.h"
+        -:    7:#include "stack.hpp"
+        -:    8:
+        1:    9:int main()
+        -:   10:{
+        1:   11:    int sum = clamp(5, 0, 3) + clamp(-1, 0, 3) + gcd(12, 18);
+        -:   12:
+        1:   13:    demo::Stack<int> numbers;
+        1:   14:    numbers.push(sum);
+        1:   15:    numbers.push(1);
+        1:   16:    sum += numbers.pop();
+        -:   17:
+        1:   18:    demo::Stack<std::string> words;
+        1:   19:    words.push("<script>alert('not escaped')</script>");  // HTML escaping check in the report
+        1:   20:    words.pop();
+        -:   21:
+        1:   22:    demo::Tokenizer tokenizer("a,b,,c");
+        1:   23:    sum += static_cast<int>(tokenizer.split(',').size());
+       1*:   24:    sum += demo::Tokenizer::isBlank(" ") ? 1 : 0;
+        -:   25:
+        1:   26:    if (sum < 0) {
+    #####:   27:        std::printf("unreachable\n");
+        -:   28:    }
+        1:   29:    std::printf("%d\n", sum);
+        1:   30:    return 0;
+        1:   31:}

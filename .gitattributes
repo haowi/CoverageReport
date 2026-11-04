@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Hanno Witt
+# SPDX-License-Identifier: Apache-2.0
+
+tests/data/** -text
+*.sh text eol=lf
+src/report.* text eol=lf
+sbom/*.json text eol=lf

@@ -1,0 +1,88 @@
+        -:    0:Source:/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/tokenizer.cpp
+        -:    1:// SPDX-FileCopyrightText: 2026 Hanno Witt
+        -:    2:// SPDX-License-Identifier: Apache-2.0
+        -:    3:
+        -:    4:#include "stack.hpp"
+        -:    5:
+        -:    6:namespace demo {
+        -:    7:
+function _ZN4demo9TokenizerC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE called 1 returned 100% blocks executed 100%
+        1:    8:Tokenizer::Tokenizer(const std::string& text) : text_(text) {}
+call    0 returned 1
+        -:    9:
+function _ZNK4demo9Tokenizer5splitB5cxx11Ec called 1 returned 100% blocks executed 80%
+        1:   10:std::vector<std::string> Tokenizer::split(char separator) const
+        -:   11:{
+        1:   12:    std::vector<std::string> parts;
+call    0 returned 1
+        1:   13:    std::string current;
+call    0 returned 1
+        7:   14:    for (char c : text_) {
+call    0 returned 1
+call    1 returned 1
+call    2 returned 6
+call    3 returned 6
+call    4 returned 7
+branch  5 taken 6
+branch  6 taken 1 (fallthrough)
+        6:   15:        if (c == separator) {
+branch  0 taken 3 (fallthrough)
+branch  1 taken 3
+        3:   16:            parts.push_back(current);
+call    0 returned 3
+branch  1 taken 3 (fallthrough)
+branch  2 taken 0 (throw)
+        3:   17:            current.clear();
+call    0 returned 3
+        -:   18:        } else {
+        3:   19:            current += c;
+call    0 returned 3
+branch  1 taken 3 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   20:        }
+        -:   21:    }
+        1:   22:    if (!current.empty()) {
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0
+        1:   23:        parts.push_back(current);
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   24:    }
+        2:   25:    return parts;
+        1:   26:}
+call    0 returned 1
+call    1 never executed
+call    2 never executed
+        -:   27:
+        -:   28:// Never called by the test driver: stays uncovered.
+function _ZNK4demo9Tokenizer5countEc called 0 returned 0% blocks executed 0%
+    #####:   29:size_t Tokenizer::count(char separator) const
+        -:   30:{
+    #####:   31:    size_t total = 0;
+    #####:   32:    for (char c : text_) {
+call    0 never executed
+call    1 never executed
+call    2 never executed
+call    3 never executed
+call    4 never executed
+branch  5 never executed
+branch  6 never executed (fallthrough)
+    #####:   33:        if (c == separator) {
+branch  0 never executed (fallthrough)
+branch  1 never executed
+    #####:   34:            ++total;
+        -:   35:        }
+        -:   36:    }
+    #####:   37:    return total;
+        -:   38:}
+        -:   39:
+function _ZN4demo9Tokenizer7isBlankERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE called 1 returned 100% blocks executed 100%
+        1:   40:bool Tokenizer::isBlank(const std::string& text)
+        -:   41:{
+        1:   42:    return text.find_first_not_of(" \t") == std::string::npos;
+call    0 returned 1
+        -:   43:}
+        -:   44:
+        -:   45:}  // namespace demo

@@ -1,0 +1,43 @@
+<!--
+SPDX-FileCopyrightText: 2026 Hanno Witt
+SPDX-License-Identifier: Apache-2.0
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>coveragereport</AssemblyName>
+    <RootNamespace>CoverageReport</RootNamespace>
+    <Version>2.0.1</Version>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <!-- Shown in the file properties of coveragereport.exe. Program.Product and Program.Copyright must match. -->
+  <PropertyGroup>
+    <Product>Coverage Report</Product>
+    <AssemblyTitle>Coverage Report</AssemblyTitle>
+    <Description>Renders C/C++ and assembler code coverage as an HTML report.</Description>
+    <Authors>Hanno Witt</Authors>
+    <Company>Hanno Witt</Company>
+    <Copyright>Copyright © 2026 Hanno Witt</Copyright>
+    <!-- Keeps the product version at "2.0.0" instead of appending the Git commit hash. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="coveragereport.Tests" />
+    <!-- Hostile input fails with a clean error instead of exhausting the machine. -->
+    <RuntimeHostConfigurationOption Include="System.GC.HeapHardLimit" Value="4294967296" />
+    <EmbeddedResource Include="report.css" LogicalName="report.css" />
+    <EmbeddedResource Include="report.js" LogicalName="report.js" />
+  </ItemGroup>
+
+</Project>

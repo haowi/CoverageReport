@@ -1,0 +1,58 @@
+        -:    0:Source:/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/stack.hpp
+        -:    1:// SPDX-FileCopyrightText: 2026 Hanno Witt
+        -:    2:// SPDX-License-Identifier: Apache-2.0
+        -:    3:
+        -:    4:#ifndef STACK_HPP
+        -:    5:#define STACK_HPP
+        -:    6:
+        -:    7:#include <stdexcept>
+        -:    8:#include <string>
+        -:    9:#include <vector>
+        -:   10:
+        -:   11:namespace demo {
+        -:   12:
+        -:   13:template <typename T>
+        -:   14:class Stack {
+        -:   15:public:
+        3:   16:    void push(const T& value) { items_.push_back(value); }
+------------------
+_ZN4demo5StackINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEE4pushERKS6_:
+        1:   16:    void push(const T& value) { items_.push_back(value); }
+------------------
+_ZN4demo5StackIiE4pushERKi:
+        2:   16:    void push(const T& value) { items_.push_back(value); }
+------------------
+        -:   17:
+        2:   18:    T pop()
+        -:   19:    {
+        2:   20:        if (items_.empty()) {
+    #####:   21:            throw std::out_of_range("empty stack");
+        -:   22:        }
+        2:   23:        T top = items_.back();
+        2:   24:        items_.pop_back();
+        2:   25:        return top;
+        -:   26:    }
+        -:   27:
+        -:   28:    bool empty() const { return items_.empty(); }
+        -:   29:
+        -:   30:    // Never instantiated by the test driver.
+        -:   31:    void clear() { items_.clear(); }
+        -:   32:
+        -:   33:private:
+        -:   34:    std::vector<T> items_;
+        -:   35:};
+        -:   36:
+        -:   37:class Tokenizer {
+        -:   38:public:
+        -:   39:    explicit Tokenizer(const std::string& text);
+        -:   40:    std::vector<std::string> split(char separator) const;
+        -:   41:    size_t count(char separator) const;
+        -:   42:    static bool isBlank(const std::string& text);
+        -:   43:
+        -:   44:private:
+        -:   45:    std::string text_;
+        -:   46:};
+        -:   47:
+        -:   48:}  // namespace demo
+        -:   49:
+        -:   50:#endif

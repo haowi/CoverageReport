@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Hanno Witt
+# SPDX-License-Identifier: Apache-2.0
+
+bin/
+obj/
+dist/
+out/
+.vs/
+*.user
+.claude/
+sample/**/*.gcov
+sample/*.gcov

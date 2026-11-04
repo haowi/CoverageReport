@@ -1,0 +1,183 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3f1fb83d-3f2b-49e2-9401-16edec454a7e",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-04T19:39:07Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "New-Sbom.ps1",
+          "version": "2.0.1",
+          "description": "SBOM generator of the Coverage Report build"
+        }
+      ]
+    },
+    "authors": [
+      {
+        "name": "Hanno Witt"
+      }
+    ],
+    "manufacturer": {
+      "name": "Hanno Witt"
+    },
+    "supplier": {
+      "name": "Hanno Witt"
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "pkg:generic/coveragereport@2.0.1",
+      "supplier": {
+        "name": "Hanno Witt"
+      },
+      "authors": [
+        {
+          "name": "Hanno Witt"
+        }
+      ],
+      "name": "Coverage Report",
+      "version": "2.0.1",
+      "description": "Renders C/C++ and assembler code coverage as an HTML report. Distributed as the single file coveragereport.exe.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b076f8f40db0e3c036d6917f230b641c987d0d4f301b1175f23e225f1dcb860f"
+        },
+        {
+          "alg": "SHA-512",
+          "content": "dda8698e4572b7704f2d55f59504227f94c86781c395717816789729e664ee085f9499030ff6426cd87f0134a9414cd3a30064bdddcecf184ec022d4252f2d89"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "copyright": "Copyright © 2026 Hanno Witt",
+      "purl": "pkg:generic/coveragereport@2.0.1"
+    }
+  },
+  "components": [
+    {
+      "type": "framework",
+      "bom-ref": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+      "supplier": {
+        "name": "Microsoft Corporation",
+        "url": [
+          "https://dot.net/"
+        ]
+      },
+      "name": "Microsoft.NETCore.App.Runtime.win-x64",
+      "version": "10.0.14",
+      "description": ".NET runtime, built into the exe in trimmed form. Its third-party notices are in THIRD-PARTY-NOTICES.TXT of the package.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a3ea61b4a2da6d28e562dd1cdacf80eb4dd6b9727b0a2b47f9d6aba90dbbcb1f"
+        },
+        {
+          "alg": "SHA-512",
+          "content": "98b5866a04cfe67ee731f2502365e95d1620bcf727c98bc073c6620dfba6f1284cd1472b3c3c9f5b82eaa38e54b650870ae7044541d0b8c4c8eb26d5c1e08df4"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "purl": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://dot.net/"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/dotnet/dotnet/tree/0427b9abbead3fa64c6655eb4290c537397131fa",
+          "comment": "Source of this .NET release, commit 0427b9abbead3fa64c6655eb4290c537397131fa"
+        },
+        {
+          "type": "release-notes",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=799421"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14",
+      "supplier": {
+        "name": "Microsoft Corporation",
+        "url": [
+          "https://dot.net/"
+        ]
+      },
+      "name": "Microsoft.NETCore.App.Host.win-x64",
+      "version": "10.0.14",
+      "description": "singlefilehost.exe: starts the built-in runtime and forms the native part of the exe. The hashes are those of the host before the application was bundled into it.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "55b55ef1e98a4c4d1c8ef9d74042f69361a4bb5893ffd350f61042b59594ca8a"
+        },
+        {
+          "alg": "SHA-512",
+          "content": "0a164f241fde77fbbe5942fac1eea3ce4e2c50f9a88c3ea65f1247eae2637dc1604280083541b73f7704a246cbb3dd0af424c32e7bd65ffa5aeca5753cfaa1d1"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "purl": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://dot.net/"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/dotnet/dotnet/tree/0427b9abbead3fa64c6655eb4290c537397131fa",
+          "comment": "Source of this .NET release, commit 0427b9abbead3fa64c6655eb4290c537397131fa"
+        },
+        {
+          "type": "release-notes",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=799421"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:generic/coveragereport@2.0.1",
+      "dependsOn": [
+        "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+        "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14"
+      ]
+    },
+    {
+      "ref": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14",
+      "dependsOn": []
+    }
+  ]
+}

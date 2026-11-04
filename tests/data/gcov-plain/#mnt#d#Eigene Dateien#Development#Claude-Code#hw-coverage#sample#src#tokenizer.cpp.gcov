@@ -1,0 +1,46 @@
+        -:    0:Source:/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/tokenizer.cpp
+        -:    1:// SPDX-FileCopyrightText: 2026 Hanno Witt
+        -:    2:// SPDX-License-Identifier: Apache-2.0
+        -:    3:
+        -:    4:#include "stack.hpp"
+        -:    5:
+        -:    6:namespace demo {
+        -:    7:
+        1:    8:Tokenizer::Tokenizer(const std::string& text) : text_(text) {}
+        -:    9:
+        1:   10:std::vector<std::string> Tokenizer::split(char separator) const
+        -:   11:{
+        1:   12:    std::vector<std::string> parts;
+        1:   13:    std::string current;
+        7:   14:    for (char c : text_) {
+        6:   15:        if (c == separator) {
+        3:   16:            parts.push_back(current);
+        3:   17:            current.clear();
+        -:   18:        } else {
+        3:   19:            current += c;
+        -:   20:        }
+        -:   21:    }
+        1:   22:    if (!current.empty()) {
+        1:   23:        parts.push_back(current);
+        -:   24:    }
+        2:   25:    return parts;
+        1:   26:}
+        -:   27:
+        -:   28:// Never called by the test driver: stays uncovered.
+    #####:   29:size_t Tokenizer::count(char separator) const
+        -:   30:{
+    #####:   31:    size_t total = 0;
+    #####:   32:    for (char c : text_) {
+    #####:   33:        if (c == separator) {
+    #####:   34:            ++total;
+        -:   35:        }
+        -:   36:    }
+    #####:   37:    return total;
+        -:   38:}
+        -:   39:
+        1:   40:bool Tokenizer::isBlank(const std::string& text)
+        -:   41:{
+        1:   42:    return text.find_first_not_of(" \t") == std::string::npos;
+        -:   43:}
+        -:   44:
+        -:   45:}  // namespace demo
