@@ -34,7 +34,7 @@ static class Parsers
                 return IsCobertura(text) ? InputFormat.Cobertura : InputFormat.Unknown;
             if (line.StartsWith("TN:", StringComparison.Ordinal) || line.StartsWith("SF:", StringComparison.Ordinal))
                 return InputFormat.Lcov;
-            if (TryParseGcovLine(raw, out _, out var number, out var rest) && number == 0 && rest.StartsWith("Source:", StringComparison.Ordinal))
+            if (TryParseGcovLine(raw, out _, out var number, out var rest, out var validCount) && validCount && number == 0 && rest.StartsWith("Source:", StringComparison.Ordinal))
                 return InputFormat.Gcov;
             return InputFormat.Unknown;
         }
@@ -259,7 +259,7 @@ static class Parsers
                 continue;
             }
 
-            if (TryParseGcovLine(line, out var hits, out var number, out var rest))
+            if (TryParseGcovLine(line, out var hits, out var number, out var rest, out var validCount))
             {
                 if (afterSeparator)
                 {
@@ -268,7 +268,11 @@ static class Parsers
                 }
                 if (number == 0)
                 {
-                    if (rest.StartsWith("Source:", StringComparison.Ordinal) && rest.Length > 7)
+                    if (!validCount)
+                    {
+                        malformed++;
+                    }
+                    else if (rest.StartsWith("Source:", StringComparison.Ordinal) && rest.Length > 7)
                     {
                         Finish();
                         file = new FileCoverage(rest[7..]);
@@ -282,6 +286,9 @@ static class Parsers
                     malformed++;
                     continue;
                 }
+                // The line keeps its source text, so the lines after it stay in place; only its count is dropped.
+                if (!validCount)
+                    malformed++;
 
                 currentLine = number;
                 foreach (var (name, called) in pending)
@@ -352,12 +359,20 @@ static class Parsers
         return result;
     }
 
-    // Parses a gcov source line such as "        3:   13:code", "    #####:   18:code" or "        -:    0:Source:x".
-    static bool TryParseGcovLine(string line, out long? hits, out int number, out string rest)
+    /// <summary>
+    /// Parses a gcov source line such as <c>"        3:   13:code"</c>, <c>"    #####:   18:code"</c> or
+    /// <c>"        -:    0:Source:x"</c>.
+    /// </summary>
+    /// <remarks>
+    /// A line with a valid line number is a source line even if its count cannot be read; <paramref name="validCount"/>
+    /// is then <c>false</c> and <paramref name="hits"/> is <c>null</c>, so the caller can report it.
+    /// </remarks>
+    static bool TryParseGcovLine(string line, out long? hits, out int number, out string rest, out bool validCount)
     {
         hits = null;
         number = 0;
         rest = "";
+        validCount = false;
         var first = line.IndexOf(':');
         if (first <= 0)
             return false;
@@ -367,6 +382,7 @@ static class Parsers
 
         var count = line[..first].Trim();
         rest = line[(second + 1)..];
+        validCount = true;
         switch (count)
         {
             case "-":
@@ -375,9 +391,10 @@ static class Parsers
                 hits = 0;
                 return true;
         }
-        if (!TryCount(count.TrimEnd('*'), out var value))
-            return false;
-        hits = value;
+        if (TryCount(count.TrimEnd('*'), out var value))
+            hits = value;
+        else
+            validCount = false;
         return true;
     }
 
@@ -390,7 +407,10 @@ static class Parsers
         var factor = text[^1] switch { 'k' => 1e3, 'M' => 1e6, 'G' => 1e9, 'T' => 1e12, 'P' => 1e15, 'E' => 1e18, _ => 1.0 };
         if (factor == 1.0)
             return long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value);
-        if (!double.TryParse(text[..^1], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var number))
+        // double.TryParse also accepts "NaN", "Infinity" and "-Infinity" whatever the number style, and the model
+        // relies on counts never being negative.
+        if (!double.TryParse(text[..^1], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var number)
+            || !double.IsFinite(number) || number < 0)
             return false;
         var scaled = number * factor;
         value = scaled >= long.MaxValue ? long.MaxValue : (long)scaled;

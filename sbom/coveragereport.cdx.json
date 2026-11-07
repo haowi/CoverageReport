@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:3f1fb83d-3f2b-49e2-9401-16edec454a7e",
+  "serialNumber": "urn:uuid:e186ddf5-3856-48ea-a9da-2f658f19388f",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-04T19:39:07Z",
+    "timestamp": "2026-11-07T15:59:03Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -16,7 +16,7 @@
         {
           "type": "application",
           "name": "New-Sbom.ps1",
-          "version": "2.0.1",
+          "version": "2.1.0",
           "description": "SBOM generator of the Coverage Report build"
         }
       ]
@@ -34,7 +34,7 @@
     },
     "component": {
       "type": "application",
-      "bom-ref": "pkg:generic/coveragereport@2.0.1",
+      "bom-ref": "pkg:generic/coveragereport@2.1.0",
       "supplier": {
         "name": "Hanno Witt"
       },
@@ -44,16 +44,16 @@
         }
       ],
       "name": "Coverage Report",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "description": "Renders C/C++ and assembler code coverage as an HTML report. Distributed as the single file coveragereport.exe.",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "b076f8f40db0e3c036d6917f230b641c987d0d4f301b1175f23e225f1dcb860f"
+          "content": "9bb05a6a523e89b7435688cfb46e7f39f0df3f020b947063eb7e149060319f2a"
         },
         {
           "alg": "SHA-512",
-          "content": "dda8698e4572b7704f2d55f59504227f94c86781c395717816789729e664ee085f9499030ff6426cd87f0134a9414cd3a30064bdddcecf184ec022d4252f2d89"
+          "content": "44fad76dd473d5902886b67e96d3d3583113539a609d9ecf5a0ea6bfd6e70c673fe234609ccaa06020819ad6d4150f05c7a21724a5ca7983fd56178648bc258f"
         }
       ],
       "licenses": [
@@ -64,7 +64,7 @@
         }
       ],
       "copyright": "Copyright © 2026 Hanno Witt",
-      "purl": "pkg:generic/coveragereport@2.0.1"
+      "purl": "pkg:generic/coveragereport@2.1.0"
     }
   },
   "components": [
@@ -165,7 +165,7 @@
   ],
   "dependencies": [
     {
-      "ref": "pkg:generic/coveragereport@2.0.1",
+      "ref": "pkg:generic/coveragereport@2.1.0",
       "dependsOn": [
         "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
         "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14"

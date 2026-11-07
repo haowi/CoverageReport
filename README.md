@@ -186,7 +186,8 @@ names it (a `.gcov` file's `../src/a.c`). Linux paths such as `/home/...`, netwo
 
 What is not found there is looked up in the `--source-dir` folders by the longest matching path tail:
 `/build/proj/src/a.c` finds `D:\proj\src\a.c`. If several files fit equally well, none is guessed; the report then says
-why it shows no code. A match on the file name alone may be a different file, so the page says so.
+why it shows no code. Such a page keeps the key figures and the function table, without a line listing. A match on the
+file name alone may be a different file, so the page says so.
 
 `.gcov` files also carry their own source text. It is used when the file is not found on disk, and the page then says
 so. Such text can differ from the real file. A match on the file name alone never replaces this text.

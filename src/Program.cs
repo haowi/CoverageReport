@@ -12,6 +12,7 @@ static class Program
 {
     public const string Product = "Coverage Report";
     public const string Copyright = "Copyright © 2026 Hanno Witt";
+    public const string License = "Licensed under the Apache License 2.0";
     public const int MaxTitleLength = 200;
 
     const int Success = 0, RuntimeError = 1, UsageError = 2;
@@ -112,7 +113,7 @@ static class Program
     static void PrintBanner()
     {
         Console.WriteLine($"{Product} {Version}");
-        Console.WriteLine($"{Copyright}. Licensed under the Apache License 2.0.");
+        Console.WriteLine($"{Copyright}. {License}.");
     }
 
     static Options ParseArguments(string[] args)

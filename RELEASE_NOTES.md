@@ -1,5 +1,24 @@
 # Release notes
 
+## 2.1.0
+
+New:
+
+- The report footer names the license next to the version and the copyright notice: "Licensed under the Apache License
+  2.0", as in `--help` and `--version`. It is plain text, not a link, so the report never points to the internet.
+
+Changed:
+
+- A file page without source code shows the key figures and the function table, and in the Source section only the
+  reason why the code is missing. The long list of colored rows with bare line numbers is gone. Function names on such
+  a page are no longer links, as there are no lines to jump to.
+
+Fixed:
+
+- A gcov count that cannot be read, such as `NaNk` or `-Infinityk`, is now reported as malformed and gives the line
+  no count. Before, `-Infinityk` and `Infinityk` counted as covered and `NaNk` as not covered, without a warning, and
+  other unreadable counts made the whole file fail or dropped its last line. The line keeps its source text.
+
 ## 2.0.1
 
 New:

@@ -223,6 +223,7 @@ sealed class FileCoverage(string path)
         }
     }
 
+    // Counts are never negative, as every parser rejects a sign; a negative b would overflow the check.
     static long Saturate(long a, long b) => a > long.MaxValue - b ? long.MaxValue : a + b;
 }
 
