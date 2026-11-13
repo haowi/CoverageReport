@@ -697,6 +697,80 @@ static class TestRunner
         }
     }
 
+    // The decision tracker keeps its frames on the heap and finishes nested statements in a loop, so deep nesting can
+    // neither overflow the stack nor cost more than linear time.
+    static void TestHostileDecisionsStayFast()
+    {
+        const int n = 2_000_000;
+        string[] hostile =
+        [
+            "void f(){" + string.Concat(Enumerable.Repeat("if(a)", n / 5)) + "x;}",
+            "void f(){" + string.Concat(Enumerable.Repeat("if(a){}else ", n / 12)) + "x;}",
+            "void f(){" + string.Concat(Enumerable.Repeat("while(a)", n / 8)) + "x;}",
+            "void f(){" + string.Concat(Enumerable.Repeat("do ", n / 3)) + "x;}",
+            "void f(){switch(a){" + string.Concat(Enumerable.Repeat("case 1:x;", n / 9)) + "}}",
+            "void f(){" + new string('?', n) + "}",
+            "void f(){" + new string('{', n) + new string('}', n) + "}",
+            "void f(){" + string.Concat(Enumerable.Repeat("#if A\nif(a){\n#else\nwhile(b){\n#endif\n", n / 40)) + "}",
+            "void f(){" + string.Concat(Enumerable.Repeat("[](){", n / 5)) + "}",
+        ];
+        foreach (var source in hostile)
+        {
+            var lines = source.Split('\n');
+            var map = new DecisionMap(lines.Length);
+            var timer = Stopwatch.StartNew();
+            CodeAnalyzer.Analyze(lines, map);
+            var file = new FileCoverage("/p/a.c");
+            for (var i = 1; i <= Math.Min(lines.Length, 1000); i++)
+                file.AddLine(i, i);
+            Estimator.EstimateBranches(file, map);
+            Check(timer.ElapsedMilliseconds < 5000, $"{source[..Math.Min(20, source.Length)]} took {timer.ElapsedMilliseconds} ms");
+            Check(map.Decisions.Count <= DecisionMap.MaxDecisions, "the number of decisions is capped");
+        }
+    }
+
+    // Security review: every open statement holds a frame, so a file of opening braces once filled the memory. The
+    // nesting depth and the sections of a switch are capped, and the analysis says when it gave up.
+    static void TestDecisionTrackerIsBounded()
+    {
+        static (DecisionMap Map, SourceMetrics Metrics) Track(string source)
+        {
+            var lines = source.Split('\n');
+            var map = new DecisionMap(lines.Length);
+            return (map, CodeAnalyzer.Analyze(lines, map));
+        }
+
+        var nested = DecisionTracker.MaxNesting - 10;
+        var (map, _) = Track("void f(){\n" + new string('{', nested) + "\nif(a){\nx();\n}\n" + new string('}', nested) + "\n}");
+        Check(!map.Truncated && map.Decisions.Count == 1, "real nesting is followed");
+
+        (map, _) = Track("void f(){if(a){\nx();\n}\n" + new string('{', 5_000_000) + new string('}', 5_000_000) + "\n}\nvoid g(){\nif(b){\ny();\n}\n}");
+        Check(map.Truncated, "nesting beyond the cap gives up and says so");
+        Equal("1,7", string.Join(',', map.Decisions.Select(d => d.Line)), "decisions before it are kept, and the next function is followed again");
+
+        var cases = string.Concat(Enumerable.Range(0, DecisionTracker.MaxSections + 1).Select(i => $"case {i}: x(); break;\n"));
+        var f = Estimate("void f(int a){\nswitch(a){\n" + cases + "}\n}", new() { [1] = 1, [2] = 1, [3] = 1 });
+        Check(Unevaluable(f, 2).Contains($"more than {DecisionTracker.MaxSections} sections", StringComparison.Ordinal), $"a giant switch is not evaluated: {Unevaluable(f, 2)}");
+
+        // Adding an estimated method resets the line index; it must not be rebuilt per function.
+        var functions = string.Concat(Enumerable.Repeat("void f(){x();}\n", CodeAnalyzer.MaxFunctionsPerFile));
+        var hits = new SortedDictionary<int, long>();
+        for (var i = 1; i <= CodeAnalyzer.MaxFunctionsPerFile; i++)
+            hits[i] = i % 2;
+        var timer = Stopwatch.StartNew();
+        var many = Estimate(functions, hits);
+        Check(timer.ElapsedMilliseconds < 5000, $"{CodeAnalyzer.MaxFunctionsPerFile} functions took {timer.ElapsedMilliseconds} ms");
+        Equal(new Counts(CodeAnalyzer.MaxFunctionsPerFile / 2, CodeAnalyzer.MaxFunctionsPerFile), many.MethodCounts, "and every one counts");
+
+        // Thousands of ?: on one line give one reason in the tooltip, not thousands.
+        var o = TempDir();
+        var t = Estimate("void f(){\nx = " + string.Concat(Enumerable.Repeat("a ? b : ", 5000)) + "c;\n}", new() { [1] = 1, [2] = 1 });
+        HtmlReport.Write(ReportOf(t), o);
+        var page = File.ReadAllText(Path.Combine(o, HtmlReport.PageName(t.Path)));
+        Equal(1, Regex.Matches(page, "decides within one line").Count, "each reason once");
+        Equal(5000, t.DecisionsNotEvaluable, "while every decision is counted");
+    }
+
     static void TestFunctionLookupAndCoverage()
     {
         var m = Metrics("void a() {\n  x();\n}\n\nvoid b() {\n  y();\n}\n");
@@ -1619,6 +1693,276 @@ static class TestRunner
         Check(MarkdownReport.Render(titled).Contains("\n# Firmware \\<b\\>\\[v2\\]\\<\\/b\\> \\| \\*main\\*\n", StringComparison.Ordinal), "a title is the heading, rendered literally");
     }
 
+    // ---- estimated branch and method coverage ----
+
+    // Analyzes the source and estimates branches and methods from the given line hits, as a run without such data does.
+    static FileCoverage Estimate(string source, SortedDictionary<int, long> hits)
+    {
+        var file = WithLines(hits);
+        file.Source = source.Split('\n');
+        var decisions = new DecisionMap(file.Source.Length);
+        file.Metrics = CodeAnalyzer.Analyze(file.Source, decisions);
+        Estimator.EstimateBranches(file, decisions);
+        Estimator.EstimateMethods(file, file.Metrics);
+        file.Metrics.AttachCoverage(file);
+        return file;
+    }
+
+    static string Unevaluable(FileCoverage file, int line) => file.Unevaluable.TryGetValue(line, out var reasons) ? string.Join("; ", reasons) : "";
+
+    // The numbers are those gcov reports for the same code, without its exception branches (see sample/src/mathutil.c).
+    static void TestEstimateIfWithoutElse()
+    {
+        var f = Estimate("""
+            int clamp(int v, int lo, int hi)
+            {
+                if (v < lo) {
+                    return lo;
+                }
+                if (v > hi) {
+                    return hi;
+                }
+                return v;
+            }
+            """, new() { [1] = 2, [3] = 2, [4] = 1, [6] = 1, [7] = 1, [9] = 0 });
+        Equal("1,1", string.Join(',', f.Branches[3]), "both ways taken: the condition ran twice, the branch once");
+        Equal("1,0", string.Join(',', f.Branches[6]), "the false way not taken: condition and branch ran equally often");
+        Check(f.HasBranchData && f.BranchesEstimated, "marked as estimated");
+        Equal(new Counts(3, 4), f.Metrics!.Functions[0].BranchCoverage, "per function");
+    }
+
+    static void TestEstimateIfElseAndElseIf()
+    {
+        var f = Estimate("""
+            void f(int a) {
+              if (a > 0) {
+                x();
+              } else if (a < 0) {
+                y();
+              } else {
+                z();
+              }
+            }
+            """, new() { [1] = 3, [2] = 3, [3] = 2, [4] = 1, [5] = 0, [7] = 1 });
+        Equal("2,1", string.Join(',', f.Branches[2]), "the else if ran once, so the false way was taken once");
+        Equal("0,1", string.Join(',', f.Branches[4]), "the else branch has its own line");
+        Equal(0, f.DecisionsNotEvaluable, "all resolved");
+
+        var single = Estimate("int g(int x) {\n  if (x) return 1;\n  return 0;\n}", new() { [1] = 1, [2] = 1, [3] = 0 });
+        Check(!single.Branches.ContainsKey(2), "condition and branch on one line cannot be told apart");
+        Check(Unevaluable(single, 2).Contains("no measured line of its own", StringComparison.Ordinal), $"and say why: {Unevaluable(single, 2)}");
+        Equal(1, single.DecisionsNotEvaluable, "counted as not evaluable");
+
+        var dead = Estimate("void h(int x) {\n  if (x) {\n    y();\n  }\n}", new() { [1] = 0 });
+        Check(dead.Branches.Count == 0 && dead.DecisionsNotEvaluable == 0, "a decision on a line without coverage data was not compiled and does not count");
+    }
+
+    static void TestEstimateLoops()
+    {
+        var f = Estimate("""
+            int gcd(int a, int b)
+            {
+                while (b != 0) {
+                    int t = a % b;
+                    a = b;
+                    b = t;
+                }
+                for (int i = 0; i < a; i++) {
+                    t();
+                }
+                for (;;) {
+                    break;
+                }
+                while (true) {
+                    break;
+                }
+                do {
+                    a--;
+                } while (a > 0);
+                for (int i = 0; i < 3; i++) a++;
+                while (a <
+                       b) {
+                    a++;
+                }
+                for (int i = 0; i < 2; i++) {
+                    for (int j = 0; j < 2; j++) {
+                        a++;
+                    }
+                }
+                return a;
+            }
+            """, new()
+        {
+            [1] = 1, [3] = 4, [4] = 3, [5] = 3, [6] = 3, [8] = 1, [9] = 0, [11] = 1, [12] = 1, [14] = 1, [15] = 1,
+            [18] = 2, [19] = 2, [20] = 4, [21] = 1, [22] = 1, [23] = 1, [25] = 3, [26] = 6, [27] = 4, [30] = 1,
+        });
+        Equal("3,1", string.Join(',', f.Branches[3]), "body entered three times, left once");
+        Equal("0,1", string.Join(',', f.Branches[8]), "a loop that never ran its body");
+        Check(!f.Branches.ContainsKey(11) && !f.Unevaluable.ContainsKey(11), "for (;;) has no branch");
+        Check(!f.Branches.ContainsKey(14) && !f.Unevaluable.ContainsKey(14), "neither has while (true)");
+        Check(Unevaluable(f, 19).Contains("do-while", StringComparison.Ordinal), $"do-while is not evaluable: {Unevaluable(f, 19)}");
+        Check(Unevaluable(f, 20).Contains("no measured line of its own", StringComparison.Ordinal), "body on the head's line");
+        Check(Unevaluable(f, 21).Contains("spans several lines", StringComparison.Ordinal), "head on two lines");
+        Check(Unevaluable(f, 25).Contains("starts with another loop", StringComparison.Ordinal), "an inner loop's count is the number of its tests");
+        Equal("4,2", string.Join(',', f.Branches[26]), "the inner loop itself is fine");
+    }
+
+    static void TestEstimateSwitch()
+    {
+        var f = Estimate("""
+            int g(int k) {
+              switch (k) {
+              case 1: return 10;
+              case 2:
+              case 3:
+                k++;
+                break;
+              case 4: {
+                k--;
+                break;
+              }
+              default:
+                return 0;
+              }
+              return k;
+            }
+            """, new() { [1] = 5, [2] = 5, [3] = 1, [6] = 2, [7] = 2, [9] = 0, [10] = 0, [13] = 2, [15] = 2 });
+        Equal("1,2,0,2", string.Join(',', f.Branches[2]), "one branch per section; labels in a row share one; a break in a block ends its section");
+
+        var fallthrough = Estimate("void h(int k) {\n  switch (k) {\n  case 1:\n    a();\n  case 2:\n    b();\n    break;\n  }\n}",
+            new() { [1] = 1, [2] = 1, [4] = 0, [6] = 1, [7] = 1 });
+        Check(Unevaluable(fallthrough, 2).Contains("falls through", StringComparison.Ordinal), $"case 2 also runs after case 1: {Unevaluable(fallthrough, 2)}");
+    }
+
+    static void TestEstimateOtherDecisions()
+    {
+        var f = Estimate("""
+            int f(int a) {
+              if constexpr (sizeof(int) == 4) {
+                a++;
+              }
+              int b = a > 0 ? 1 : 2;
+              auto l = [](int x) {
+                if (x) {
+                  return 1;
+                }
+                return 0;
+              };
+              try {
+                b++;
+              } catch (int e) {
+                b--;
+              }
+              return b;
+            }
+            """, new() { [1] = 1, [2] = 1, [3] = 1, [5] = 1, [6] = 1, [7] = 2, [8] = 1, [10] = 1, [13] = 1, [15] = 0, [17] = 1 });
+        Check(!f.Branches.ContainsKey(2) && !f.Unevaluable.ContainsKey(2), "if constexpr is decided by the compiler");
+        Check(Unevaluable(f, 5).Contains("?:", StringComparison.Ordinal), "?: is reported, not counted");
+        Equal("1,1", string.Join(',', f.Branches[7]), "an if inside a lambda is followed");
+        Check(!f.Branches.ContainsKey(14) && !f.Unevaluable.ContainsKey(14), "catch is not counted");
+
+        // Both sides of an #if are read from the same state, like the scanner does for function heads.
+        var g = Estimate("void f(int a) {\n#ifdef X\n  if (a) {\n#else\n  if (!a) {\n#endif\n    g();\n  }\n}", new() { [1] = 1, [5] = 1, [7] = 1 });
+        Equal("1,0", string.Join(',', g.Branches[5]), "the side that was compiled");
+        Equal(1, g.Branches.Count, "and only that one");
+    }
+
+    static void TestEstimateMethods()
+    {
+        var f = Estimate("""
+            int f(int a) {
+              return a;
+            }
+            int f(double a) {
+              return 2;
+            }
+            template <typename T> void never(T t) {
+              t.x();
+            }
+            void partly(int a) {
+              if (a) {
+                x();
+              }
+            }
+            """, new() { [1] = 1, [2] = 1, [4] = 0, [5] = 0, [10] = 1, [11] = 1, [12] = 0 });
+        Check(f.HasMethodData && f.MethodsEstimated, "marked as estimated");
+        Equal(new Counts(2, 3), f.MethodCounts, "overloads count apart; a function without measured lines does not count");
+        Equal(new Counts(1, 3), f.FullMethodCounts, "partly is called but not fully covered");
+        Equal(2, f.Methods.Values.Count(m => m.Name == "f"), "both overloads keep their plain name");
+    }
+
+    static void TestEstimatesOnlyWithoutAnyMeasuredData()
+    {
+        var dir = TempDir();
+        var src = Path.Combine(dir, "a.c");
+        File.WriteAllText(src, "int f(int x) {\n  if (x) {\n    return 1;\n  }\n  return 0;\n}\n");
+        var plain = Path.Combine(dir, "plain.info");
+        File.WriteAllText(plain, $"SF:{src.Replace('\\', '/')}\nDA:1,1\nDA:2,1\nDA:3,0\nDA:5,1\nend_of_record\n");
+        var withBranches = Path.Combine(dir, "branches.info");
+        File.WriteAllText(withBranches, "SF:/p/b.c\nDA:1,1\nBRDA:1,0,0,1\nBRDA:1,0,1,0\nFN:1,b\nFNDA:1,b\nend_of_record\n");
+
+        var o = TempDir();
+        Equal(0, Cli("-i", plain, "-o", o, "--markdown"), "run");
+        var md = File.ReadAllText(Path.Combine(o, "coverage.md"));
+        Check(md.Contains("| Branch coverage | 1 | 2 | ≈ 50% (estimated) |", StringComparison.Ordinal), "estimated when no input has branch data");
+        Check(md.Contains("| Method coverage | 1 | 1 | ≈ 100% (estimated) |", StringComparison.Ordinal), "and methods likewise");
+        Check(md.Contains("≈ Branch and method coverage are estimated", StringComparison.Ordinal), "with the explanation");
+
+        o = TempDir();
+        Equal(0, Cli("-i", plain, "-i", withBranches, "-o", o, "--markdown"), "mixed run");
+        md = File.ReadAllText(Path.Combine(o, "coverage.md"));
+        Check(!md.Contains('≈'), "one measured input keeps every total measured");
+        Check(md.Contains("a.c` | 75% (3/4) | n/a | n/a |", StringComparison.Ordinal), "the file without data stays n/a");
+
+        o = TempDir();
+        Equal(0, Cli("-i", plain, "-o", o, "--markdown", "--no-estimates"), "run without estimates");
+        md = File.ReadAllText(Path.Combine(o, "coverage.md"));
+        Check(md.Contains("| Branch coverage | n/a | n/a | n/a |", StringComparison.Ordinal) && !md.Contains('≈'), "--no-estimates shows only what was measured");
+    }
+
+    // gcov output without -b, against what gcov -b counts for the same run (sample/src): 12 of 20 branches of if, loops
+    // and switch, and 8 of 10 functions, counting each template once.
+    static void TestEstimateMatchesGcovOnTheSample()
+    {
+        var o = TempDir();
+        Equal(0, Cli("-i", Path.Combine(_data, "gcov-plain"), "-o", o, "-x", "/usr/*", "--markdown"), "run");
+        var md = File.ReadAllText(Path.Combine(o, "coverage.md"));
+        Check(md.Contains("| Branch coverage | 12 | 20 | ≈ 60% (estimated) |", StringComparison.Ordinal), "branches as gcov counts them");
+        Check(md.Contains("| Method coverage | 8 | 10 | ≈ 80% (estimated) |", StringComparison.Ordinal), "methods");
+        Check(md.Contains("1 decision could not be evaluated and is not counted.", StringComparison.Ordinal), "the ?: in main.cpp");
+
+        var page = File.ReadAllText(Path.Combine(o, HtmlReport.PageName("/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/mathutil.c")));
+        Check(page.Contains("Branch coverage</dt><dd class=\"kpi-value\">≈ 83.3%</dd>", StringComparison.Ordinal), "key figure marked");
+        Check(page.Contains("<span class=\"badge est\" title=\"Estimated: 1 of 2 branches taken\">≈1/2</span>", StringComparison.Ordinal), "estimated badge");
+        Check(page.Contains("<span class=\"status none\">≈ Not covered</span>", StringComparison.Ordinal), "estimated status");
+        Check(page.Contains("title=\"Unknown: method coverage is estimated from line coverage\">n/a</td>", StringComparison.Ordinal), "calls unknown");
+
+        var main = File.ReadAllText(Path.Combine(o, HtmlReport.PageName("/mnt/d/Eigene Dateien/Development/Claude-Code/hw-coverage/sample/src/main.cpp")));
+        Check(main.Contains("<span class=\"badge unknown\" title=\"Not evaluable from line coverage: ?: decides within one line\">?</span>", StringComparison.Ordinal), "the ?: is marked");
+
+        var index = File.ReadAllText(Path.Combine(o, "index.html"));
+        Check(index.Contains("<span>≈ 83.3%</span>", StringComparison.Ordinal), "file table marked");
+        Check(index.Contains("marks values estimated from line coverage and source code, not measured.", StringComparison.Ordinal), "and explained");
+    }
+
+    static void TestEstimatedHistory()
+    {
+        var dir = TempDir();
+        var f = Estimate("void f(int a) {\n  if (a) {\n    x();\n  }\n}", new() { [1] = 1, [2] = 1, [3] = 1 });
+        History.Save(dir, ReportOf(f));
+        File.WriteAllText(Path.Combine(dir, "coveragereport-20200101T000000000Z-00000000.json"),
+            "{\"version\":1,\"timestamp\":\"2020-01-01T00:00:00Z\",\"line\":{\"covered\":1,\"total\":1},\"branch\":{\"covered\":1,\"total\":2},\"method\":null,\"files\":[]}");
+        var runs = History.Load(dir, []);
+        Equal(2, runs.Count, "both runs");
+        Check(!runs[0].Totals.BranchEstimated, "a file written before estimates existed reads as measured");
+        Check(runs[1].Totals.BranchEstimated && runs[1].Totals.MethodEstimated, "the estimate flags survive the round trip");
+        Check(runs[1].Files["/p/a.c"].BranchEstimated, "per file too");
+
+        var svg = HtmlReport.HistoryChart([(runs[0].Time, runs[0].Totals), (runs[1].Time, runs[1].Totals)]);
+        Check(svg.Contains("fill=\"#fff\" stroke=\"#C6601F\"", StringComparison.Ordinal), "an estimated point is hollow");
+        Check(svg.Contains("Branch ≈ 50%", StringComparison.Ordinal), "and its label marked");
+    }
+
     // ---- history ----
 
     static void TestHistoryRoundTrip()
@@ -1787,7 +2131,7 @@ static class TestRunner
                 Equal(0, Program.Main([flag]), flag);
                 Check(output.ToString().StartsWith($"Coverage Report {Program.Version}", StringComparison.Ordinal), $"{flag} starts with name and version");
                 Check(output.ToString().Contains("Copyright © 2026 Hanno Witt. Licensed under the Apache License 2.0.", StringComparison.Ordinal), $"{flag} shows the copyright notice");
-                foreach (var parameter in new[] { "-i, --input", "-o, --output", "-t, --title", "-x, --exclude", "-s, --source-dir", "--source-dir-only", "--history-dir", "--markdown", "-h, --help", "--version" })
+                foreach (var parameter in new[] { "-i, --input", "-o, --output", "-t, --title", "-x, --exclude", "-s, --source-dir", "--source-dir-only", "--history-dir", "--markdown", "--no-estimates", "-h, --help", "--version" })
                     Check(output.ToString().Contains(parameter, StringComparison.Ordinal), $"{flag} lists {parameter}");
             }
         }
@@ -2398,7 +2742,8 @@ static class TestRunner
     static void TestRealGcovWithoutBranchData()
     {
         var o = TempDir();
-        Equal(0, Cli("-i", Path.Combine(_data, "gcov-plain"), "-o", o, "-x", "/usr/*", "--markdown"), "run");
+        // Without estimates; TestEstimateMatchesGcovOnTheSample covers them on the same files.
+        Equal(0, Cli("-i", Path.Combine(_data, "gcov-plain"), "-o", o, "-x", "/usr/*", "--markdown", "--no-estimates"), "run");
         var md = File.ReadAllText(Path.Combine(o, "coverage.md"));
         Check(md.Contains("| Branch coverage | n/a | n/a | n/a |", StringComparison.Ordinal), "branch n/a");
         Check(md.Contains("| Method coverage | n/a | n/a | n/a |", StringComparison.Ordinal), "method n/a");

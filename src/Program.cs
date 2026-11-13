@@ -44,6 +44,9 @@ static class Program
                                    Use it with coverage files from others.
               --history-dir <dir>  Keep one result per run here and show coverage history in the report.
               --markdown           Also write coverage.md to the output folder.
+              --no-estimates       Show branch and method coverage only as measured. Without this option,
+                                   they are estimated from line coverage and source code when no input
+                                   has them, and marked with ≈.
           -h, --help, -?           Show this help.
               --version            Show the version.
 
@@ -65,6 +68,7 @@ static class Program
         public string? HistoryDir;
         public bool SourceDirOnly;
         public bool Markdown;
+        public bool NoEstimates;
         public bool Help;
         public bool ShowVersion;
     }
@@ -141,6 +145,7 @@ static class Program
                 case "--source-dir-only": options.SourceDirOnly = true; break;
                 case "--history-dir": options.HistoryDir = Value(); break;
                 case "--markdown": options.Markdown = true; break;
+                case "--no-estimates": options.NoEstimates = true; break;
                 default: throw new UsageException($"Unknown argument: {arg}");
             }
         }
@@ -196,9 +201,19 @@ static class Program
 
         var resolver = options.SourceDirs.Count > 0 ? new SourceResolver(options.SourceDirs) : null;
         var read = ResolveSources(report, resolver, options);
+
+        // Estimates are made for a kind of data only if no input has it at all, so that no total ever mixes measured
+        // and estimated numbers.
+        var estimateBranches = !options.NoEstimates && !report.Files.Any(f => f.HasBranchData);
+        var estimateMethods = !options.NoEstimates && !report.Files.Any(f => f.HasMethodData);
         foreach (var file in report.Files.Where(f => f.Source != null))
         {
-            file.Metrics = SourceResolver.Analyze(file.Path, file.Source!);
+            var decisions = estimateBranches && !SourceResolver.IsAssembly(file.Path) ? new DecisionMap(file.Source!.Length) : null;
+            file.Metrics = SourceResolver.Analyze(file.Path, file.Source!, decisions);
+            if (decisions != null)
+                Estimator.EstimateBranches(file, decisions);
+            if (estimateMethods && !file.Metrics.IsAssembly)
+                Estimator.EstimateMethods(file, file.Metrics);
             file.Metrics.AttachCoverage(file);
         }
         if (resolver != null)
@@ -428,12 +443,17 @@ static class Program
         var t = report.Totals;
         Console.WriteLine($"Files:    {t.FileCount}" + (excluded > 0 ? $" ({excluded} excluded)" : ""));
         Console.WriteLine($"Line:     {Report.PercentOf(t.Line)} ({t.Line.Covered}/{t.Line.Total})");
-        Console.WriteLine($"Branch:   {(t.FilesWithBranchData > 0 ? $"{Report.PercentOf(t.Branch)} ({t.Branch.Covered}/{t.Branch.Total})" : "n/a")}");
-        Console.WriteLine($"Method:   {(t.FilesWithMethodData > 0 ? $"{Report.PercentOf(t.Method)} ({t.Method.Covered}/{t.Method.Total})" : "n/a")}");
+        static string Estimated(bool estimated, Counts counts) => estimated && counts.Total > 0 ? ", estimated" : "";
+        Console.WriteLine($"Branch:   {(t.FilesWithBranchData > 0 ? $"{Report.PercentOf(t.Branch, t.BranchEstimated)} ({t.Branch.Covered}/{t.Branch.Total}){Estimated(t.BranchEstimated, t.Branch)}" : "n/a")}");
+        Console.WriteLine($"Method:   {(t.FilesWithMethodData > 0 ? $"{Report.PercentOf(t.Method, t.MethodEstimated)} ({t.Method.Covered}/{t.Method.Total}){Estimated(t.MethodEstimated, t.Method)}" : "n/a")}");
         Console.WriteLine($"LOC:      {(t.FilesWithMetrics > 0 ? t.Loc.ToString() : "n/a")}");
         Console.WriteLine($"CCM:      {(t.FilesWithComplexity > 0 ? $"{t.Complexity} in {t.Functions} functions, highest {t.MaxComplexity}" : "n/a")}");
         Console.WriteLine($"CRAP:     {(t.MaxCrap is { } crap ? $"highest {Report.Score(crap)}, {t.FunctionsAboveCrapLimit} of {t.FunctionsWithCrap} functions above {FunctionMetrics.CrapLimit}" : "n/a")}");
 
+        if (t.BranchEstimated)
+            Console.WriteLine($"info: branch coverage estimated from line coverage and source code; {Report.Decisions(t.DecisionsNotEvaluable)} not evaluable.");
+        if (t.MethodEstimated)
+            Console.WriteLine("info: method coverage estimated from line coverage and source code.");
         if (t.FilesWithBranchData < t.FileCount)
             Console.WriteLine($"info: no branch data for {t.FileCount - t.FilesWithBranchData} of {t.FileCount} file(s); shown as n/a.");
         if (t.FilesWithMethodData < t.FileCount)

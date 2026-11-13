@@ -49,10 +49,10 @@ sealed class SourceResolver(IEnumerable<string> roots)
 
     public static bool IsImplementation(string path) => ImplementationExtensions.Contains(Path.GetExtension(path));
 
-    /// <summary>Runs the analyzer that fits the file type.</summary>
-    public static SourceMetrics Analyze(string path, string[] source) => IsAssembly(path)
+    /// <summary>Runs the analyzer that fits the file type. Decisions are recorded for C and C++ only.</summary>
+    public static SourceMetrics Analyze(string path, string[] source, DecisionMap? decisions = null) => IsAssembly(path)
         ? AssemblyAnalyzer.Analyze(source, atStartsComment: !Path.GetExtension(path).Equals(".asm", StringComparison.OrdinalIgnoreCase))
-        : CodeAnalyzer.Analyze(source);
+        : CodeAnalyzer.Analyze(source, decisions);
 
     /// <summary>
     /// Maps a path from a coverage file to a path on this computer, or returns <c>null</c> if it must not be read.

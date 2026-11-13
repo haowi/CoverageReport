@@ -37,6 +37,7 @@ coveragereport -i <file|dir|wildcard> [-i ...] -o <dir> [options]
 | `--source-dir-only` | Never read the paths the coverage files name, only `--source-dir` folders. Use it with coverage files from others. |
 | `--history-dir <dir>` | Keep one result per run here and show coverage history in the report. |
 | `--markdown` | Also write `coverage.md`: totals, code metrics and tables per file and per function, no source code. |
+| `--no-estimates` | Show branch and method coverage only as measured. Without it, they are estimated when no input has them; see [Estimated branch and method coverage](#estimated-branch-and-method-coverage). |
 | `-h`, `--help`, `-?` | Show name, version, copyright and all parameters with a short explanation. |
 | `--version` | Show name, version and copyright. |
 
@@ -142,14 +143,61 @@ The format is detected from the file's content, not its extension.
 
 A metric the input does not contain is shown as **n/a**, never as 0 %, and is no error. If only some files have
 branch or method data, totals count only those files and the summary says how many that is. A history curve leaves
-a gap for such a run.
+a gap for such a run. If no input has branch or method data at all, it is estimated from line coverage and source code
+instead (see below).
 
 Known limits of the inputs:
 
 - **gcov text** leaves out function and branch records for some template instantiations (gcov itself then reports
   "No branches" for that file). Use lcov when template code matters.
-- **gcovr 7** writes no `<method>` entries, so its Cobertura files have no method coverage.
+- **gcovr 7** writes no `<method>` entries, so its Cobertura files have no method coverage; it is estimated instead.
 - **Cobertura** only states how many branches of a line were taken, not which ones.
+
+## Estimated branch and method coverage
+
+lcov leaves out branch data unless it is enabled, gcov writes none without `-b`, and gcovr writes no methods. If no
+input has branch data, or no input has method data, Coverage Report estimates that kind from line coverage and the
+source code. It does so for a kind only when every input lacks it, so a total never mixes measured and estimated numbers.
+`--no-estimates` turns the estimate off; the values then show n/a as before.
+
+Every estimated value is marked with **≈**: in the key figures, the file and function tables, `coverage.md` and the
+console, each with a note that it was not measured. Branch badges in the source view read `≈1/2` and have a dashed
+border. The history keeps estimates with a mark, and draws them as hollow points.
+
+**Methods.** Each function the source analysis finds counts as a method. It counts as called if one of its measured
+lines ran, and as fully covered if all of them ran. How often it was called is unknown, so the Calls column shows n/a. A
+function without any measured line was not compiled, such as a template never instantiated, and does not count, as
+compilers do not report it either. Templates count once per function in the source, not once per instantiation.
+
+**Branches.** A decision is an `if`, a `for` or `while` loop, or a `switch`. Its branches are told apart by the lines
+that belong to each branch alone:
+
+| Decision | Branches | Taken if |
+|---|---|---|
+| `if` with `else` | then, else | a line of the branch ran; for `else if`, its condition line ran |
+| `if` without `else` | then, false | then: a line of the branch ran. False: the condition line ran more often than the branch was entered. |
+| `for`, `while` | body, exit | body: a line of the body ran. Exit: the head ran more often than the body was entered. |
+| `switch` | one per section; labels in a row share one | a line of the section ran |
+
+The counts come from the hit counts of these lines, as gcov writes them: the head of a loop runs once per test, so it
+runs once more than the body per pass through the loop. For the sample project the estimate finds the same 12 of 20
+branches of its `if`, loops and `switch` that `gcov -b` reports for them.
+
+Not counted, since line coverage cannot show them:
+
+- The parts of `&&` and `||`, and exception paths. Compilers count these as branches too, so measured branch coverage
+  usually differs, mostly downwards.
+- `switch` without `default`: the way past all cases. `catch` handlers. `if constexpr`, `for (;;)`, `while (true)` and
+  other constant conditions, which compile to no branch.
+
+A decision whose branches cannot be told apart is reported as **not evaluable** and left out of the numbers. Its line
+shows a `?` badge with the reason, and the key figures say how many there are. This happens when a branch has no line of
+its own (`if (x) return;`), with `?:`, with `do`-`while`, when a loop head spans several lines, when a branch starts
+with a loop (whose count is the number of its tests, not of entries), and when one `case` falls through into the next.
+A decision on a line without coverage data was not compiled and is left out entirely.
+
+The estimate relies on gcov's line counts. Other tools may count lines with several statements differently. Code on
+the same line as a lambda can also make a condition line count higher than it ran.
 
 ## Excluding files
 
@@ -236,7 +284,9 @@ Coverage files, history files and source text are treated as untrusted input.
 - **History** holds paths and counts, never source code. Runs saved under the former name hw-coverage are still read.
 - **Source analysis.** One pass over the text, with no recursion and no regular expressions, so hostile source cannot
   overflow the stack. It is built to stay linear in the size of the text, and tests attack the patterns known to have
-  slowed it down. Function names are escaped like every other input and capped at 256 characters.
+  slowed it down. Function names are escaped like every other input and capped at 256 characters. The branch estimate
+  follows nesting up to a fixed depth and keeps a fixed number of decisions, so source text, which a gcov file can
+  carry along, cannot fill the memory with them.
 - **Limits.** Input that exceeds a limit ends with a clean error and exit code 1. There is no limit on running time or on
   the total size of several inputs, and up to 4 GB of memory can be a heavy load on a small machine.
 
@@ -257,6 +307,9 @@ These end in a warning instead, and the run continues:
 |---|---|
 | Branches per line (Cobertura) | 256; a line above it loses its branch data |
 | Functions per source file | 100,000; the rest is left out and the analysis marked incomplete |
+| Decisions per source file (branch estimate) | 100,000; the rest is left out and the analysis marked incomplete |
+| Nesting of statements (branch estimate) | 256 levels; the rest of the function is left out and the analysis marked incomplete |
+| Sections of one `switch` (branch estimate) | 4,096; a larger `switch` is not evaluable |
 | Files without coverage data | 100,000; the rest is not listed |
 | History read | newest 50 valid runs, at most 200 files and 256 MB |
 | History file | 64 MB; a larger run is not saved |

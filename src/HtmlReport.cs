@@ -261,7 +261,9 @@ static class HtmlReport
           .Append("<button type=\"button\" id=\"expand\">Expand all</button></div></div>");
         AppendFileTable(sb, report);
         sb.Append($"<p class=\"hint\">Bars: dark teal from {GoodFrom} %, light teal from {FairFrom} %, orange below. ")
-          .Append($"CRAP shows the highest score of a function in the file or folder. {H(CrapLegend)}</p></section>");
+          .Append($"CRAP shows the highest score of a function in the file or folder. {H(CrapLegend)}")
+          .Append(t.BranchEstimated || t.MethodEstimated ? $" {H(Report.Approx)}marks values estimated from line coverage and source code, not measured." : "")
+          .Append("</p></section>");
         AppendUnmeasured(sb, report);
         sb.Append("</main>").Append(Footer(report));
         sb.Append($"<script>{Js}</script></body></html>");
@@ -278,13 +280,21 @@ static class HtmlReport
         var known = t.FilesWithMetrics > 0;
         var noComplexity = known ? "Not computed for assembler" : "Needs source code: use --source-dir";
 
+        // An estimate is a caveat, so it is shown as a note, ahead of any note about partial data.
+        static string? Notes(string? first, string? second) => first == null ? second : second == null ? first : first + " " + second;
+        var branchEstimate = t.BranchEstimated
+            ? Estimator.Note + (t.DecisionsNotEvaluable > 0 ? $" {Report.Decisions(t.DecisionsNotEvaluable)} not evaluable." : "")
+            : null;
+        var methodEstimate = t.MethodEstimated ? Estimator.Note + " A function counts as called if one of its lines ran." : null;
+
         sb.Append("<dl class=\"kpis\">");
         Kpi(sb, "Line coverage", Report.PercentOf(t.Line), t.Line.Percent,
             $"{N(t.Line.Covered)} of {N(t.Line.Total)} coverable lines, {N(t.Line.Total - t.Line.Covered)} uncovered");
-        Kpi(sb, "Branch coverage", Report.PercentOf(branch), branch?.Percent,
-            branch is { } b ? $"{N(b.Covered)} of {N(b.Total)} branches" : "No branch data", branchNote);
-        Kpi(sb, "Method coverage", Report.PercentOf(method), method?.Percent,
-            method is { } m ? $"{N(m.Covered)} of {N(m.Total)} methods, {N(t.FullMethod.Covered)} fully ({Report.PercentOf(t.FullMethod)})" : "No method data", methodNote);
+        Kpi(sb, "Branch coverage", Report.PercentOf(branch, t.BranchEstimated), branch?.Percent,
+            branch is { } b ? $"{N(b.Covered)} of {N(b.Total)} branches" : "No branch data", Notes(branchEstimate, branchNote));
+        Kpi(sb, "Method coverage", Report.PercentOf(method, t.MethodEstimated), method?.Percent,
+            method is { } m ? $"{N(m.Covered)} of {N(m.Total)} methods, {N(t.FullMethod.Covered)} fully ({Report.PercentOf(t.FullMethod, t.MethodEstimated)})" : "No method data",
+            Notes(methodEstimate, methodNote));
         var caveats = new List<string>();
         if (t.FilesIncomplete > 0)
             caveats.Add($"Analysis incomplete in {N(t.FilesIncomplete)} of {N(t.FilesWithMetrics)} files: braces do not add up, numbers may be too low.");
@@ -302,6 +312,8 @@ static class HtmlReport
             : t.FilesWithComplexity > 0 ? "No function has a measured line" : noComplexity,
             legend: t.MaxCrap != null ? CrapLegend : null);
         sb.Append("</dl>");
+        if (t.BranchEstimated || t.MethodEstimated)
+            sb.Append($"<p class=\"hint\">{H(Report.EstimateNote(t))}</p>");
     }
 
     static void AppendUnmeasured(StringBuilder sb, Report report)
@@ -345,8 +357,8 @@ static class HtmlReport
         { } c => $"<td>{Report.Score(c)}</td>",
     };
 
-    static string CoverageCell(Counts coverage) =>
-        coverage.Total > 0 ? $"<td>{Report.PercentOf(coverage)}</td>" : "<td class=\"na\">n/a</td>";
+    static string CoverageCell(Counts coverage, bool estimated = false) =>
+        coverage.Total > 0 ? $"<td>{Report.PercentOf(coverage, estimated)}</td>" : "<td class=\"na\">n/a</td>";
 
     static void AppendRiskiest(StringBuilder sb, Report report)
     {
@@ -421,8 +433,8 @@ static class HtmlReport
     static void AppendCounts(StringBuilder sb, Totals t)
     {
         PercentCell(sb, t.Line, null);
-        PercentCell(sb, t.FilesWithBranchData > 0 ? t.Branch : null, null);
-        PercentCell(sb, t.FilesWithMethodData > 0 ? t.Method : null, t.FilesWithMethodData > 0 ? $"{N(t.FullMethod.Covered)} fully covered" : null);
+        PercentCell(sb, t.FilesWithBranchData > 0 ? t.Branch : null, null, t.BranchEstimated);
+        PercentCell(sb, t.FilesWithMethodData > 0 ? t.Method : null, t.FilesWithMethodData > 0 ? $"{N(t.FullMethod.Covered)} fully covered" : null, t.MethodEstimated);
 
         Cell(sb, t.FilesWithComplexity > 0 ? t.Functions : null);
         Cell(sb, t.FilesWithMetrics > 0 ? t.Loc : null);
@@ -450,12 +462,14 @@ static class HtmlReport
         sb.Append($"<td data-v=\"{Report.Score(s)}\"{hot}>{Report.Score(s)}</td>");
     }
 
-    static void PercentCell(StringBuilder sb, Counts? counts, string? title)
+    static void PercentCell(StringBuilder sb, Counts? counts, string? title, bool estimated = false)
     {
         if (counts is { Percent: { } p } c)
         {
+            if (estimated)
+                title = (title != null ? title + "; " : "") + "estimated from line coverage and source code";
             var titleAttribute = title != null ? $" title=\"{H(title)}\"" : "";
-            sb.Append($"<td data-v=\"{p.ToString("0.###", CultureInfo.InvariantCulture)}\"{titleAttribute}><div class=\"pct\"><span>{Report.Percent(p)}</span>")
+            sb.Append($"<td data-v=\"{p.ToString("0.###", CultureInfo.InvariantCulture)}\"{titleAttribute}><div class=\"pct\"><span>{Report.PercentOf(c, estimated)}</span>")
               .Append($"<span class=\"count\">{N(c.Covered)}/{N(c.Total)}</span>").Append(Bar(p, 64, 6)).Append("</div></td>");
         }
         else
@@ -468,17 +482,19 @@ static class HtmlReport
 
     // The teal shades alone are hard to tell apart for some readers, so each series also has its own dash pattern
     // and a direct label.
-    static readonly (string Label, string Color, string? Dash, Func<Snapshot, Counts?> Pick)[] Series =
+    static readonly (string Label, string Color, string? Dash, Func<Snapshot, Counts?> Pick, Func<Snapshot, bool> Estimated)[] Series =
     [
-        ("Line", Teal, null, s => s.Line),
-        ("Branch", Rust, "7 4", s => s.Branch),
-        ("Method", Mist, "2 3", s => s.Method),
+        ("Line", Teal, null, s => s.Line, _ => false),
+        ("Branch", Rust, "7 4", s => s.Branch, s => s.BranchEstimated),
+        ("Method", Mist, "2 3", s => s.Method, s => s.MethodEstimated),
     ];
 
     static void AppendHistory(StringBuilder sb, List<(DateTimeOffset Time, Snapshot? Snapshot)> runs)
     {
         sb.Append("<section><div class=\"section-head\"><h2>Coverage history</h2></div><div class=\"chart\">");
         sb.Append(HistoryChart(runs));
+        if (runs.Any(r => r.Snapshot is { } v && Series.Any(s => s.Estimated(v) && s.Pick(v)?.Percent != null)))
+            sb.Append($"<p class=\"hint\">Hollow points and {H(Report.Approx.Trim())} mark values estimated from line coverage and source code, not measured.</p>");
         sb.Append("<details><summary>Data table</summary><div class=\"scroll\"><table class=\"plain\"><thead><tr><th class=\"left\">Run</th>");
         foreach (var s in Series)
             sb.Append($"<th>{s.Label}</th>");
@@ -487,7 +503,7 @@ static class HtmlReport
         {
             sb.Append($"<tr><td class=\"left\">{time.ToLocalTime():yyyy-MM-dd HH:mm:ss}</td>");
             foreach (var s in Series)
-                sb.Append($"<td>{(snapshot is { } v ? Report.PercentOf(s.Pick(v)) : "n/a")}</td>");
+                sb.Append($"<td>{(snapshot is { } v ? Report.PercentOf(s.Pick(v), s.Estimated(v)) : "n/a")}</td>");
             sb.Append("</tr>");
         }
         sb.Append("</tbody></table></div></details></div></section>");
@@ -549,20 +565,22 @@ static class HtmlReport
 
             for (var i = 0; i < runs.Count; i++)
             {
-                var percent = runs[i].Snapshot is { } v ? s.Pick(v)?.Percent : null;
-                if (percent is not { } p)
+                if (runs[i].Snapshot is not { } v || s.Pick(v)?.Percent is not { } p)
                     continue;
-                // A native tooltip; the transparent circle enlarges the hit target.
-                sb.Append($"<g><title>{runs[i].Time.ToLocalTime():yyyy-MM-dd HH:mm:ss} - {s.Label}: {Report.Percent(p)}</title>")
+
+                // A native tooltip; the transparent circle enlarges the hit target. An estimate is drawn hollow.
+                var estimated = s.Estimated(v);
+                var (fill, stroke) = estimated ? ("#fff", s.Color) : (s.Color, "#fff");
+                sb.Append($"<g><title>{runs[i].Time.ToLocalTime():yyyy-MM-dd HH:mm:ss} - {s.Label}: {H(Report.PercentOf(s.Pick(v), estimated))}{(estimated ? " (estimated)" : "")}</title>")
                   .Append($"<circle cx=\"{F(X(i))}\" cy=\"{F(Y(p))}\" r=\"10\" fill=\"transparent\"/>")
-                  .Append($"<circle cx=\"{F(X(i))}\" cy=\"{F(Y(p))}\" r=\"4\" fill=\"{s.Color}\" stroke=\"#fff\" stroke-width=\"2\"/></g>");
+                  .Append($"<circle cx=\"{F(X(i))}\" cy=\"{F(Y(p))}\" r=\"4\" fill=\"{fill}\" stroke=\"{stroke}\" stroke-width=\"2\"/></g>");
             }
 
             var last = Enumerable.Range(0, runs.Count).Reverse()
-                .Select(i => runs[i].Snapshot is { } v ? s.Pick(v)?.Percent : null)
-                .FirstOrDefault(p => p != null);
-            if (last is { } lastPercent)
-                directLabels.Add((Y(lastPercent), $"{s.Label} {Report.Percent(lastPercent)}"));
+                .Select(i => runs[i].Snapshot)
+                .FirstOrDefault(v => v is { } snapshot && s.Pick(snapshot)?.Percent != null);
+            if (last is { } lastRun)
+                directLabels.Add((Y(s.Pick(lastRun)!.Value.Percent!.Value), $"{s.Label} {Report.PercentOf(s.Pick(lastRun), s.Estimated(lastRun))}"));
         }
 
         // Direct labels are pushed apart so that series with equal values stay readable.
@@ -638,6 +656,8 @@ static class HtmlReport
             if (function != null)
                 matched.Add(function);
             var (status, tone) = m.Hits <= 0 ? ("Not covered", "none") : file.IsFullyCovered(m) ? ("Fully covered", "full") : ("Partly covered", "part");
+            if (file.MethodsEstimated)
+                status = Report.Approx + status;
 
             // A function found by the analysis already carries its coverage, with the reported end line taken into
             // account. Otherwise the method runs to its reported end line or up to the next method.
@@ -646,20 +666,29 @@ static class HtmlReport
                 : (default, default);
             rows.Add((m.Line, $"<tr><td class=\"left fn\">{Link(m.Name, m.Line)}</td><td>{(m.Line > 0 ? N(m.Line) : "n/a")}</td>"
                 + (function != null ? $"<td>{N(function.Loc)}</td>{ComplexityCell(function.Complexity)}{CrapCell(function.Crap)}" : "<td class=\"na\">n/a</td><td class=\"na\">n/a</td><td class=\"na\">n/a</td>")
-                + $"<td>{N(m.Hits)}</td>{CoverageCell(lines)}{CoverageCell(branches)}"
-                + $"<td class=\"left\"><span class=\"status {tone}\">{status}</span></td></tr>"));
+                + (file.MethodsEstimated ? "<td class=\"na\" title=\"Unknown: method coverage is estimated from line coverage\">n/a</td>" : $"<td>{N(m.Hits)}</td>")
+                + $"{CoverageCell(lines)}{CoverageCell(branches, file.BranchesEstimated)}"
+                + $"<td class=\"left\"><span class=\"status {tone}\">{H(status)}</span></td></tr>"));
         }
+
+        // With estimated methods, a function the analysis found but no method stands for has no measured line.
+        var unmatchedStatus = file.MethodsEstimated ? "No measured line" : "No method data";
         foreach (var function in functions.Where(f => !matched.Contains(f)))
         {
             rows.Add((function.Line, $"<tr><td class=\"left fn\">{Link(function.Name, function.Line)}</td><td>{N(function.Line)}</td><td>{N(function.Loc)}</td>"
-                + $"{ComplexityCell(function.Complexity)}{CrapCell(function.Crap)}<td class=\"na\">n/a</td>{CoverageCell(function.Coverage)}{CoverageCell(function.BranchCoverage)}"
-                + "<td class=\"left\"><span class=\"status\">No method data</span></td></tr>"));
+                + $"{ComplexityCell(function.Complexity)}{CrapCell(function.Crap)}<td class=\"na\">n/a</td>{CoverageCell(function.Coverage)}{CoverageCell(function.BranchCoverage, file.BranchesEstimated)}"
+                + $"<td class=\"left\"><span class=\"status\">{unmatchedStatus}</span></td></tr>"));
         }
         foreach (var (_, html) in rows.OrderBy(r => r.Line))
             sb.Append(html);
         sb.Append("</tbody></table></div><p class=\"hint\">LOC and CCM come from reading the source");
         sb.Append(metrics?.IsAssembly == true ? "; for assembler, neither CCM nor CRAP is computed." : $". {H(CcmLegend)} {H(CrapLegend)}");
-        sb.Append(" Line and branch coverage count the function's lines: up to the end line the coverage file gives, else to the end the source analysis found, else up to the next function.</p></section>");
+        sb.Append(" Line and branch coverage count the function's lines: up to the end line the coverage file gives, else to the end the source analysis found, else up to the next function.");
+        if (file.MethodsEstimated)
+            sb.Append($" The methods are estimated ({H(Report.Approx.Trim())}): a function counts as called if one of its measured lines ran, and how often is unknown; one without measured lines was not compiled and does not count.");
+        if (file.BranchesEstimated)
+            sb.Append($" Branch coverage is estimated ({H(Report.Approx.Trim())}) from line coverage and source code.");
+        sb.Append("</p></section>");
     }
 
     /// <summary>Renders the source listing, with each line marked by its coverage.</summary>
@@ -680,6 +709,8 @@ static class HtmlReport
             sb.Append("<p class=\"hint\">Source text as stored in the gcov file, not read from disk. Point --source-dir at its folder to show the file itself.</p>");
         else if (file.SourceMatchedByNameOnly)
             sb.Append("<p class=\"warn\">Matched to a source file by file name only: this may be a different file of the same name.</p>");
+        if (file.BranchesEstimated)
+            sb.Append($"<p class=\"hint\">Branches marked {H(Report.Approx.Trim())} are estimated from line coverage and source code; ? marks a decision that line coverage cannot resolve, with the reason in its tooltip.</p>");
 
         sb.Append("<div class=\"scroll\"><table class=\"source\"><thead><tr><th>Hits</th><th>Line</th><th>Branches</th><th>Code</th></tr></thead><tbody>");
         for (var i = 0; i < file.Source.Length; i++)
@@ -698,7 +729,12 @@ static class HtmlReport
 
         var state = !hasHits ? "none" : hits <= 0 ? "miss" : covered < total ? "part" : "hit";
         var title = state switch { "miss" => "Not covered", "part" => "Partly covered", "hit" => "Covered", _ => "Not coverable" };
-        var branchText = total > 0 ? $"<span class=\"badge\" title=\"{covered} of {total} branches taken\">{covered}/{total}</span>" : "";
+        var branchText = total == 0 ? ""
+            : file.BranchesEstimated ? $"<span class=\"badge est\" title=\"Estimated: {covered} of {total} branches taken\">{H(Report.Approx.Trim())}{covered}/{total}</span>"
+            : $"<span class=\"badge\" title=\"{covered} of {total} branches taken\">{covered}/{total}</span>";
+        // Each reason once: a line of a hostile file can hold thousands of ?: with the same reason.
+        if (file.Unevaluable.TryGetValue(line, out var reasons))
+            branchText += $"<span class=\"badge unknown\" title=\"Not evaluable from line coverage: {H(string.Join("; ", reasons.Distinct()))}\">?</span>";
 
         sb.Append($"<tr class=\"{state}\" id=\"L{line}\"><td class=\"hits\" title=\"{title}\">{(hasHits ? N(hits) : "")}</td>")
           .Append($"<td class=\"num\">{line}</td><td class=\"brc\">{branchText}</td><td class=\"code\">{H(PathUtil.RevealInvisible(code))}</td></tr>");

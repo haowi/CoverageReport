@@ -266,7 +266,8 @@ static class CodeAnalyzer
     const int MaxRawStringPrefix = 18;
     public const int MaxFunctionsPerFile = 100_000;
 
-    public static SourceMetrics Analyze(string[] lines) => new Scanner(lines).Run();
+    /// <summary>Analyzes the source; with <paramref name="decisions"/>, also records the decisions of its functions there.</summary>
+    public static SourceMetrics Analyze(string[] lines, DecisionMap? decisions = null) => new Scanner(lines, decisions).Run();
 
     /// <summary>Whether the <c>#if</c> condition starting at <paramref name="i"/> is a literal <c>0</c> or <c>false</c>.</summary>
     /// <remarks>Comments may appear anywhere in the condition, so <c>#if 0 /* off */ || X</c> is not taken as false.</remarks>
@@ -317,23 +318,26 @@ static class CodeAnalyzer
         public int Depth { get; } = parent == null ? 0 : parent.Depth + 1;
     }
 
-    sealed class Conditional(Mode mode, int depth, Scope scope, Head head)
+    sealed class Conditional(Mode mode, int depth, Scope scope, Head head, object? decisions)
     {
         public Mode Mode { get; } = mode;
         public int Depth { get; } = depth;
         public Scope Scope { get; } = scope;
         public Head Head { get; } = head;
+        public object? Decisions { get; } = decisions;
 
         // The deepest scope an earlier side ended in, as in: #ifdef __cplusplus / extern "C" { / #else / ... / #endif
         public Scope? Deepest { get; set; }
     }
 
     /// <summary>The single-pass state machine behind <see cref="Analyze"/>.</summary>
-    sealed class Scanner(string[] lines)
+    sealed class Scanner(string[] lines, DecisionMap? decisions)
     {
         readonly bool[] _hasCode = new bool[lines.Length];
         readonly SourceMetrics _result = new();
         readonly Stack<Conditional> _conditionals = new();
+        readonly DecisionMap? _decisions = decisions;
+        readonly DecisionTracker? _tracker = decisions != null ? new DecisionTracker(decisions) : null;
 
         Scope _scope = new(null, "");
 
@@ -457,6 +461,7 @@ static class CodeAnalyzer
 
                 if (c == '"' || c == '\'')
                 {
+                    Track("\"", index + 1);
                     _text = c == '"' ? Text.String : Text.Character;
                     i++;
                 }
@@ -467,12 +472,19 @@ static class CodeAnalyzer
                         i++;
                     var word = line[start..i];
                     if (i < line.Length && line[i] == '"' && word is "R" or "LR" or "uR" or "UR" or "u8R")
+                    {
+                        Track("\"", index + 1);
                         i = StartRawString(line, i);
+                    }
                     else
+                    {
                         Word(word, index + 1);
+                    }
                 }
                 else if (char.IsAsciiDigit(c))
                 {
+                    Track("0", index + 1);
+
                     // Consumes 1'000 and 0x1F as a whole, so a digit separator is not mistaken for a character literal.
                     while (i < line.Length && (IsWordPart(line[i]) || line[i] is '.' or '\''))
                         i++;
@@ -595,7 +607,7 @@ static class CodeAnalyzer
             {
                 case "if" or "ifdef" or "ifndef":
                     if (_conditionals.Count < MaxConditionalDepth)
-                        _conditionals.Push(new Conditional(_mode, _depth, _scope, _h.Copy()));
+                        _conditionals.Push(new Conditional(_mode, _depth, _scope, _h.Copy(), _tracker?.Save()));
                     if (line[start..i] == "if" && IsAlwaysFalse(line, i))
                         _inactiveDepth = 1;
                     break;
@@ -732,6 +744,7 @@ static class CodeAnalyzer
                 _h.Line = earliest;
             _mode = saved.Mode;
             _depth = saved.Depth;
+            _tracker?.Restore(saved.Decisions);
 
             if (_scope.Depth > saved.Scope.Depth && _scope.Depth > (saved.Deepest?.Depth ?? 0))
                 saved.Deepest = _scope;
@@ -744,8 +757,19 @@ static class CodeAnalyzer
             _h.Last = token;
         }
 
+        // Counts every token for the decision map and hands those of function bodies to the decision tracker.
+        void Track(string token, int line)
+        {
+            if (_tracker == null)
+                return;
+            _decisions!.Touch(line);
+            if (_mode == Mode.Function)
+                _tracker.Feed(token, line);
+        }
+
         void Word(string word, int line)
         {
+            Track(word, line);
             if (_mode == Mode.Function)
             {
                 if (word is "if" or "for" or "while" or "case" or "catch" or "and" or "or")
@@ -763,6 +787,8 @@ static class CodeAnalyzer
                 _mode = Mode.Function;
                 _depth = 0;
                 _complexity++;
+                _tracker?.Begin(line);
+                _tracker?.Feed(word, line);
                 return;
             }
             _tryBodyJustEnded = false;
@@ -850,6 +876,7 @@ static class CodeAnalyzer
 
         void Symbol(string symbol, int line)
         {
+            Track(symbol, line);
             switch (_mode)
             {
                 case Mode.Function:
@@ -1095,6 +1122,7 @@ static class CodeAnalyzer
                 _functionHasTry = h.SawTry;
                 _functionIsMacroLike = IsAllCaps(h.Name) && !h.NameHadType;
                 _currentBody++;
+                _tracker?.Begin(line);
                 return;
             }
 

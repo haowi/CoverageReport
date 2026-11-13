@@ -1,5 +1,24 @@
 # Release notes
 
+## 2.2.0
+
+New:
+
+- Branch and method coverage are estimated from line coverage and source code when no input has them, as with lcov
+  without branch coverage, gcov without `-b` or gcovr's Cobertura without methods. Branches are the ways of `if`, `for`,
+  `while` and `switch`; a function counts as called if one of its measured lines ran. Estimates are made only when every
+  input lacks that kind of data, so a total never mixes measured and estimated numbers. The README describes the rules.
+- Every estimated value is marked with ≈ and a note that it was not measured: in the key figures, the file and function
+  tables, `coverage.md` and the console. Branch badges in the source view read `≈1/2`, with a dashed border.
+- Decisions whose branches line coverage cannot tell apart, such as `if (x) return;` on one line, `?:` or `do`-`while`,
+  are not counted but reported: a `?` badge at their line gives the reason, and the key figures say how many there are.
+- The history keeps estimated values with a mark. The chart draws them as hollow points, and the data table and the
+  labels mark them with ≈. History files written before stay readable.
+- `--no-estimates` turns the estimate off, so that branch and method coverage show n/a as before.
+- Source text is untrusted input, also when a gcov file carries it along. The branch estimate therefore follows
+  statements nested up to 256 levels deep, keeps up to 100,000 decisions per file and evaluates a `switch` with up to
+  4,096 sections. Beyond that, the analysis is marked incomplete or the `switch` not evaluable, and the run goes on.
+
 ## 2.1.0
 
 New:

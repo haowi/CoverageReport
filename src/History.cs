@@ -6,8 +6,11 @@ using System.Text.Json;
 
 namespace CoverageReport;
 
-/// <summary>Line, branch and method counts of one run; <c>null</c> where the input carried no such data.</summary>
-readonly record struct Snapshot(Counts? Line, Counts? Branch, Counts? Method);
+/// <summary>
+/// Line, branch and method counts of one run; <c>null</c> where the input carried no such data. The flags mark counts
+/// estimated from line coverage and source code.
+/// </summary>
+readonly record struct Snapshot(Counts? Line, Counts? Branch, Counts? Method, bool BranchEstimated = false, bool MethodEstimated = false);
 
 /// <summary>One stored run: its time, the project totals and the counts per file.</summary>
 sealed record HistoryRun(DateTimeOffset Time, Snapshot Totals, Dictionary<string, Snapshot> Files);
@@ -71,11 +74,17 @@ static class History
         json.WriteEndObject();
     }
 
+    // The estimate flags are written only when set, so a file without them, as written before they existed, reads as
+    // measured. That keeps the format at version 1 in both directions.
     static void WriteSnapshot(Utf8JsonWriter json, Snapshot s)
     {
         WriteCounts(json, "line", s.Line);
         WriteCounts(json, "branch", s.Branch);
         WriteCounts(json, "method", s.Method);
+        if (s.BranchEstimated)
+            json.WriteBoolean("branchEstimated", true);
+        if (s.MethodEstimated)
+            json.WriteBoolean("methodEstimated", true);
     }
 
     static void WriteCounts(Utf8JsonWriter json, string name, Counts? counts)
@@ -160,7 +169,11 @@ static class History
         }
     }
 
-    static Snapshot ReadSnapshot(JsonElement e) => new(ReadCounts(e, "line"), ReadCounts(e, "branch"), ReadCounts(e, "method"));
+    static Snapshot ReadSnapshot(JsonElement e) => new(ReadCounts(e, "line"), ReadCounts(e, "branch"), ReadCounts(e, "method"),
+        ReadFlag(e, "branchEstimated"), ReadFlag(e, "methodEstimated"));
+
+    static bool ReadFlag(JsonElement parent, string name) =>
+        parent.TryGetProperty(name, out var e) && e.ValueKind == JsonValueKind.True;
 
     static Counts? ReadCounts(JsonElement parent, string name)
     {

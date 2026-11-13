@@ -11,15 +11,22 @@ namespace CoverageReport;
 /// <param name="FilesWithComplexity">Analyzed files with functions and CCM, which excludes assembler files.</param>
 /// <param name="MaxCrap">The highest CRAP score of any function, or <c>null</c> if no function has one.</param>
 /// <param name="FunctionsWithCrap">Functions with a CRAP score, that is, with at least one measured line.</param>
+/// <param name="FilesWithEstimatedBranchData">Files whose branch data was estimated rather than measured.</param>
+/// <param name="DecisionsNotEvaluable">Decisions the branch estimate found but could not resolve from line coverage.</param>
 sealed record Totals(
     Counts Line, Counts Branch, Counts Method, Counts FullMethod, int FilesWithBranchData, int FilesWithMethodData, int FileCount,
     long Loc, long Complexity, long Functions, int MaxComplexity, int FilesWithMetrics, int FilesWithComplexity,
     double? MaxCrap, long FunctionsWithCrap, long FunctionsAboveCrapLimit,
-    int FilesIncomplete, int FilesMatchedByNameOnly)
+    int FilesIncomplete, int FilesMatchedByNameOnly,
+    int FilesWithEstimatedBranchData, int FilesWithEstimatedMethodData, long DecisionsNotEvaluable)
 {
     public double AverageComplexity => Functions == 0 ? 0 : (double)Complexity / Functions;
 
-    public Snapshot ToSnapshot() => new(Line, FilesWithBranchData > 0 ? Branch : null, FilesWithMethodData > 0 ? Method : null);
+    // Estimates are made for all files or none, so any estimated file makes the whole total an estimate.
+    public bool BranchEstimated => FilesWithEstimatedBranchData > 0;
+    public bool MethodEstimated => FilesWithEstimatedMethodData > 0;
+
+    public Snapshot ToSnapshot() => new(Line, FilesWithBranchData > 0 ? Branch : null, FilesWithMethodData > 0 ? Method : null, BranchEstimated, MethodEstimated);
 }
 
 /// <summary>A file in a <c>--source-dir</c> folder that no coverage file lists. <c>Loc</c> is <c>null</c> if the file could not be read.</summary>
@@ -46,7 +53,8 @@ sealed class Report
     {
         Counts line = default, branch = default, method = default, full = default;
         int withBranch = 0, withMethod = 0, count = 0, withMetrics = 0, withComplexity = 0, maxComplexity = 0, incomplete = 0, nameOnly = 0;
-        long loc = 0, complexity = 0, functions = 0, withCrap = 0, aboveCrapLimit = 0;
+        int estimatedBranch = 0, estimatedMethod = 0;
+        long loc = 0, complexity = 0, functions = 0, withCrap = 0, aboveCrapLimit = 0, notEvaluable = 0;
         double? maxCrap = null;
         foreach (var f in files)
         {
@@ -79,16 +87,23 @@ sealed class Report
             {
                 withBranch++;
                 branch += f.BranchCounts;
+                if (f.BranchesEstimated)
+                {
+                    estimatedBranch++;
+                    notEvaluable += f.DecisionsNotEvaluable;
+                }
             }
             if (f.HasMethodData)
             {
                 withMethod++;
                 method += f.MethodCounts;
                 full += f.FullMethodCounts;
+                if (f.MethodsEstimated)
+                    estimatedMethod++;
             }
         }
         return new Totals(line, branch, method, full, withBranch, withMethod, count, loc, complexity, functions, maxComplexity, withMetrics, withComplexity,
-            maxCrap, withCrap, aboveCrapLimit, incomplete, nameOnly);
+            maxCrap, withCrap, aboveCrapLimit, incomplete, nameOnly, estimatedBranch, estimatedMethod, notEvaluable);
     }
 
     /// <summary>The functions with the highest CRAP score.</summary>
@@ -122,7 +137,31 @@ sealed class Report
     }
 
     public static Snapshot SnapshotOf(FileCoverage f) =>
-        new(f.LineCounts, f.HasBranchData ? f.BranchCounts : null, f.HasMethodData ? f.MethodCounts : null);
+        new(f.LineCounts, f.HasBranchData ? f.BranchCounts : null, f.HasMethodData ? f.MethodCounts : null,
+            f.HasBranchData && f.BranchesEstimated, f.HasMethodData && f.MethodsEstimated);
+
+    /// <summary>The mark in front of every estimated value.</summary>
+    public const string Approx = "≈ ";
+
+    public static string Decisions(long count) => count == 1 ? "1 decision" : $"{count.ToString(CultureInfo.InvariantCulture)} decisions";
+
+    /// <summary>Says which coverage is estimated and how. Shared by the HTML and the Markdown report.</summary>
+    public static string EstimateNote(Totals t)
+    {
+        var kinds = t.BranchEstimated && t.MethodEstimated ? "Branch and method coverage are" : t.BranchEstimated ? "Branch coverage is" : "Method coverage is";
+        var note = $"{Approx}{kinds} estimated from line coverage and source code, not measured.";
+        if (t.BranchEstimated)
+        {
+            note += " A branch of an if, a loop or a switch counts as taken if a line of its own ran; the false way of an if without"
+                + " else and the exit of a loop count if the condition line ran more often than the branch was entered. The parts"
+                + " of && and ||, ?: and exception paths do not show in line coverage, so measured branch coverage usually differs.";
+            if (t.DecisionsNotEvaluable > 0)
+                note += $" {Decisions(t.DecisionsNotEvaluable)} could not be evaluated and {(t.DecisionsNotEvaluable == 1 ? "is" : "are")} not counted.";
+        }
+        if (t.MethodEstimated)
+            note += " A function counts as called if one of its measured lines ran.";
+        return note;
+    }
 
     /// <summary>Formats a percentage, rounded down so that 99.96 % is never shown as 100 %.</summary>
     public static string Percent(double? value) => value is { } p
@@ -130,6 +169,10 @@ sealed class Report
         : "n/a";
 
     public static string PercentOf(Counts? counts) => Percent(counts?.Percent);
+
+    /// <summary>Formats a percentage, marked with <see cref="Approx"/> if it is an estimate and known.</summary>
+    public static string PercentOf(Counts? counts, bool estimated) =>
+        estimated && counts?.Percent != null ? Approx + PercentOf(counts) : PercentOf(counts);
 
     /// <summary>Formats a CRAP score with at most one decimal.</summary>
     public static string Score(double? value) => value is { } v
@@ -181,9 +224,11 @@ static class MarkdownReport
         md.Append("## Summary\n\n");
         md.Append("| Metric | Covered | Total | Percent |\n|---|---:|---:|---:|\n");
         md.Append(Row("Line coverage", t.Line));
-        md.Append(Row("Branch coverage", t.FilesWithBranchData > 0 ? t.Branch : null));
-        md.Append(Row("Method coverage", t.FilesWithMethodData > 0 ? t.Method : null));
-        md.Append(Row("Full method coverage", t.FilesWithMethodData > 0 ? t.FullMethod : null));
+        md.Append(Row("Branch coverage", t.FilesWithBranchData > 0 ? t.Branch : null, t.BranchEstimated));
+        md.Append(Row("Method coverage", t.FilesWithMethodData > 0 ? t.Method : null, t.MethodEstimated));
+        md.Append(Row("Full method coverage", t.FilesWithMethodData > 0 ? t.FullMethod : null, t.MethodEstimated));
+        if (t.BranchEstimated || t.MethodEstimated)
+            md.Append('\n').Append(Report.EstimateNote(t)).Append('\n');
 
         string Metric(string text) => t.FilesWithComplexity > 0 ? text : "n/a";
         md.Append("\n## Code metrics\n\n");
@@ -211,7 +256,7 @@ static class MarkdownReport
             var s = Report.SnapshotOf(f);
             var loc = f.Metrics != null ? Number(f.Metrics.Loc) : "n/a";
             var complexity = f.Metrics is { IsAssembly: false } m ? Number(m.Complexity) : "n/a";
-            md.Append($"| {CodeSpan(Short(f))} | {Cell(s.Line)} | {Cell(s.Branch)} | {Cell(s.Method)} | {loc} | {complexity} | {Report.Score(Report.TotalsOf([f]).MaxCrap)} |\n");
+            md.Append($"| {CodeSpan(Short(f))} | {Cell(s.Line)} | {Cell(s.Branch, s.BranchEstimated)} | {Cell(s.Method, s.MethodEstimated)} | {loc} | {complexity} | {Report.Score(Report.TotalsOf([f]).MaxCrap)} |\n");
         }
         md.Append("\nCRAP: the highest score of a function in the file.\n");
 
@@ -228,7 +273,7 @@ static class MarkdownReport
             foreach (var (file, function) in functions)
             {
                 md.Append($"| {CodeSpan(function.Name)} | {CodeSpan(Short(file))} | {function.Line} | {function.Loc} | {function.Complexity} | {Report.Score(function.Crap)} ")
-                  .Append($"| {Cell(function.Coverage)} | {Cell(function.BranchCoverage)} |\n");
+                  .Append($"| {Cell(function.Coverage)} | {Cell(function.BranchCoverage, file.BranchesEstimated)} |\n");
             }
             md.Append('\n').Append(CrapLegend).Append('\n');
         }
@@ -248,11 +293,11 @@ static class MarkdownReport
 
     static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
 
-    static string Row(string label, Counts? c) => c is { } v
-        ? $"| {label} | {v.Covered} | {v.Total} | {Report.PercentOf(v)} |\n"
+    static string Row(string label, Counts? c, bool estimated = false) => c is { } v
+        ? $"| {label} | {v.Covered} | {v.Total} | {Report.PercentOf(v, estimated)}{(estimated && v.Total > 0 ? " (estimated)" : "")} |\n"
         : $"| {label} | n/a | n/a | n/a |\n";
 
-    static string Cell(Counts? c) => c is { Total: > 0 } v ? $"{Report.PercentOf(v)} ({v.Covered}/{v.Total})" : "n/a";
+    static string Cell(Counts? c, bool estimated = false) => c is { Total: > 0 } v ? $"{Report.PercentOf(v, estimated)} ({v.Covered}/{v.Total})" : "n/a";
 
     /// <summary>
     /// Wraps untrusted text in a code span, inside which nothing becomes a link, image, mention or HTML. The fence is

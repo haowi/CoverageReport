@@ -42,6 +42,17 @@ sealed class FileCoverage(string path)
     public string? SourceProblem;
     public SourceMetrics? Metrics;
 
+    /// <summary>Set if the branch data was estimated from line coverage and source code, not measured.</summary>
+    public bool BranchesEstimated;
+
+    /// <summary>Set if the method data was estimated from line coverage and source code, not measured.</summary>
+    public bool MethodsEstimated;
+
+    /// <summary>Decisions the estimate found but could not resolve, by line, each with the reason.</summary>
+    public SortedDictionary<int, List<string>> Unevaluable { get; } = [];
+
+    public int DecisionsNotEvaluable => Unevaluable.Values.Sum(reasons => reasons.Count);
+
     /// <summary>
     /// Every spelling of this file's path found in the inputs, with the folder of the coverage file that used it,
     /// in the order seen. Capped at <see cref="MaxOrigins"/>: a hostile input can spell one path in countless ways
@@ -79,6 +90,37 @@ sealed class FileCoverage(string path)
 
     public void AddMethod(string rawName, int line, int endLine, long hits) =>
         MergeMethod(Demangler.Demangle(PathUtil.StripControl(rawName)), line, endLine, hits);
+
+    /// <summary>Adds the outcomes of an estimated decision after those already on the line.</summary>
+    /// <remarks>
+    /// Unlike <see cref="AddBranches"/>, which merges the same branches from several inputs, this appends: two
+    /// decisions on one line, such as an if and a loop, have different branches.
+    /// </remarks>
+    public void AddEstimatedBranches(int line, IReadOnlyList<long> taken)
+    {
+        if (!Branches.TryGetValue(line, out var list))
+            Branches[line] = list = [];
+        list.AddRange(taken);
+        Invalidate();
+    }
+
+    /// <summary>Adds a function found by the source analysis as an estimated method.</summary>
+    /// <remarks>
+    /// Overloads share a name in the source, so the key is the function's position in the analysis instead.
+    /// Estimates are only made when no input has method data, so no measured method can be met.
+    /// </remarks>
+    public void AddEstimatedMethod(int index, string name, int line, int endLine, long hits)
+    {
+        Methods[$"estimated:{index}"] = new Method { Name = name, Line = line, EndLine = endLine, Hits = hits };
+        Invalidate();
+    }
+
+    public void AddUnevaluable(int line, string reason)
+    {
+        if (!Unevaluable.TryGetValue(line, out var reasons))
+            Unevaluable[line] = reasons = [];
+        reasons.Add(reason);
+    }
 
     /// <summary>Adds the data of another input for the same file.</summary>
     public void Merge(FileCoverage other)

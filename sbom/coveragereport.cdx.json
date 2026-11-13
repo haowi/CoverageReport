@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:e186ddf5-3856-48ea-a9da-2f658f19388f",
+  "serialNumber": "urn:uuid:576343a1-5e99-4d68-97e5-2ec91f1a9e20",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-07T15:59:03Z",
+    "timestamp": "2026-11-13T06:54:14Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -16,7 +16,7 @@
         {
           "type": "application",
           "name": "New-Sbom.ps1",
-          "version": "2.1.0",
+          "version": "2.2.0",
           "description": "SBOM generator of the Coverage Report build"
         }
       ]
@@ -34,7 +34,7 @@
     },
     "component": {
       "type": "application",
-      "bom-ref": "pkg:generic/coveragereport@2.1.0",
+      "bom-ref": "pkg:generic/coveragereport@2.2.0",
       "supplier": {
         "name": "Hanno Witt"
       },
@@ -44,16 +44,16 @@
         }
       ],
       "name": "Coverage Report",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "description": "Renders C/C++ and assembler code coverage as an HTML report. Distributed as the single file coveragereport.exe.",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "9bb05a6a523e89b7435688cfb46e7f39f0df3f020b947063eb7e149060319f2a"
+          "content": "3ffe8dc6b39da17e429e5a361416c4347eb39b3e6e88408ad28d8725baf997b0"
         },
         {
           "alg": "SHA-512",
-          "content": "44fad76dd473d5902886b67e96d3d3583113539a609d9ecf5a0ea6bfd6e70c673fe234609ccaa06020819ad6d4150f05c7a21724a5ca7983fd56178648bc258f"
+          "content": "f35fd501994f0dbc649ba143122ebb2a077177c43114b59f2ef796b41c4005ed0bbde48d615130cbfe87dcf8c3af52d8feac3e5059d93356c03c3d049801eeb6"
         }
       ],
       "licenses": [
@@ -64,13 +64,13 @@
         }
       ],
       "copyright": "Copyright © 2026 Hanno Witt",
-      "purl": "pkg:generic/coveragereport@2.1.0"
+      "purl": "pkg:generic/coveragereport@2.2.0"
     }
   },
   "components": [
     {
       "type": "framework",
-      "bom-ref": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+      "bom-ref": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.15",
       "supplier": {
         "name": "Microsoft Corporation",
         "url": [
@@ -78,16 +78,16 @@
         ]
       },
       "name": "Microsoft.NETCore.App.Runtime.win-x64",
-      "version": "10.0.14",
+      "version": "10.0.15",
       "description": ".NET runtime, built into the exe in trimmed form. Its third-party notices are in THIRD-PARTY-NOTICES.TXT of the package.",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "a3ea61b4a2da6d28e562dd1cdacf80eb4dd6b9727b0a2b47f9d6aba90dbbcb1f"
+          "content": "7423f58917342b9e4bf276fb164d5726d2c90fe2fe989c552b9e39056256a035"
         },
         {
           "alg": "SHA-512",
-          "content": "98b5866a04cfe67ee731f2502365e95d1620bcf727c98bc073c6620dfba6f1284cd1472b3c3c9f5b82eaa38e54b650870ae7044541d0b8c4c8eb26d5c1e08df4"
+          "content": "304180911187ac05d8036b7f2e8d260f11fefcee4d2ea8164dc561ef488e6494e9a0e08bfe329f3a00ea6280e2dd6f56727be22f80e1325fb99560bc731b6d4b"
         }
       ],
       "licenses": [
@@ -98,7 +98,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+      "purl": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.15",
       "externalReferences": [
         {
           "type": "website",
@@ -106,8 +106,8 @@
         },
         {
           "type": "vcs",
-          "url": "https://github.com/dotnet/dotnet/tree/0427b9abbead3fa64c6655eb4290c537397131fa",
-          "comment": "Source of this .NET release, commit 0427b9abbead3fa64c6655eb4290c537397131fa"
+          "url": "https://github.com/dotnet/dotnet/tree/8e0f8ed2312954727f8919d7d1c2f78b483b4ee7",
+          "comment": "Source of this .NET release, commit 8e0f8ed2312954727f8919d7d1c2f78b483b4ee7"
         },
         {
           "type": "release-notes",
@@ -117,7 +117,7 @@
     },
     {
       "type": "application",
-      "bom-ref": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14",
+      "bom-ref": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.15",
       "supplier": {
         "name": "Microsoft Corporation",
         "url": [
@@ -125,16 +125,16 @@
         ]
       },
       "name": "Microsoft.NETCore.App.Host.win-x64",
-      "version": "10.0.14",
+      "version": "10.0.15",
       "description": "singlefilehost.exe: starts the built-in runtime and forms the native part of the exe. The hashes are those of the host before the application was bundled into it.",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "55b55ef1e98a4c4d1c8ef9d74042f69361a4bb5893ffd350f61042b59594ca8a"
+          "content": "b6440f5591e0953ae1bacde1be537ee007e0d2c90de2aa462517cca9955690ec"
         },
         {
           "alg": "SHA-512",
-          "content": "0a164f241fde77fbbe5942fac1eea3ce4e2c50f9a88c3ea65f1247eae2637dc1604280083541b73f7704a246cbb3dd0af424c32e7bd65ffa5aeca5753cfaa1d1"
+          "content": "5e01e3c0a18ec96b789a1877f03d58c5f5229f9f9ac6ed9e16cf06a30c00bb05766f46be2000bdcf283d26dea9bcb9d768cbebb40accbc0f27aa1a99d0f9c5f1"
         }
       ],
       "licenses": [
@@ -145,7 +145,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14",
+      "purl": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.15",
       "externalReferences": [
         {
           "type": "website",
@@ -153,8 +153,8 @@
         },
         {
           "type": "vcs",
-          "url": "https://github.com/dotnet/dotnet/tree/0427b9abbead3fa64c6655eb4290c537397131fa",
-          "comment": "Source of this .NET release, commit 0427b9abbead3fa64c6655eb4290c537397131fa"
+          "url": "https://github.com/dotnet/dotnet/tree/8e0f8ed2312954727f8919d7d1c2f78b483b4ee7",
+          "comment": "Source of this .NET release, commit 8e0f8ed2312954727f8919d7d1c2f78b483b4ee7"
         },
         {
           "type": "release-notes",
@@ -165,18 +165,18 @@
   ],
   "dependencies": [
     {
-      "ref": "pkg:generic/coveragereport@2.1.0",
+      "ref": "pkg:generic/coveragereport@2.2.0",
       "dependsOn": [
-        "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
-        "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14"
+        "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.15",
+        "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.15"
       ]
     },
     {
-      "ref": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.14",
+      "ref": "pkg:nuget/Microsoft.NETCore.App.Runtime.win-x64@10.0.15",
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.14",
+      "ref": "pkg:nuget/Microsoft.NETCore.App.Host.win-x64@10.0.15",
       "dependsOn": []
     }
   ]

@@ -125,6 +125,9 @@ tr.hit .code, tr.miss .code, tr.part .code { color: var(--ink); }
 table.source tr.hit .hits, table.source tr.miss .hits, table.source tr.part .hits { color: var(--ink); font-weight: 600; }
 tr:target td { outline: 1px solid var(--rust); outline-offset: -1px; }
 .badge { display: inline-block; padding: 0 6px; border-radius: 9px; background: #fff; border: 1px solid var(--sand); color: var(--deep); font-size: 11px; line-height: 16px; }
+.badge + .badge { margin-left: 4px; }
+.badge.est { border: 1px dashed var(--teal); }
+.badge.unknown { border: 1px dotted var(--mist); color: var(--teal); }
 
 footer { max-width: 1240px; margin: 0 auto; padding: 14px 32px 28px; color: var(--teal); font-size: 12.5px; border-top: 1px solid var(--line); }
 
