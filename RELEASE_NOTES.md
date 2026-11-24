@@ -1,5 +1,13 @@
 # Release notes
 
+## 2.2.1
+
+New:
+
+- The SBOM is signed. `build.ps1` signs `dist\coveragereport.cdx.json` and `sbom\coveragereport.cdx.json` with the author's key and verifies both right away. The signature is embedded in the JSON Signature Format that CycloneDX 1.6
+  provides (ES256 over the RFC 8785 form of the BOM). The public key is in `sbom\sbom-signing-key.jwk.json`; the private key never leaves the author's Windows key store. Without the key, the build warns and leaves the SBOM unsigned.
+- The build also turns off the .NET SDK's background check for workload updates.
+
 ## 2.2.0
 
 New:

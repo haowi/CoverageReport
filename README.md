@@ -361,6 +361,26 @@ from the internet. Each run creates a new BOM with its own serial number and tim
 copy in the repository changes with every build; commit it together with a release. After a .NET patch update of the
 SDK, the next build picks up the new runtime version automatically.
 
+### Signature
+
+`build.ps1` then signs both SBOM files with the author's key and verifies them right away against
+`sbom\sbom-signing-key.jwk.json`. The signature is embedded in the file in the JSON Signature Format (JSF), as CycloneDX
+1.6 provides: the `signature` property holds the algorithm ES256 (ECDSA P-256 with SHA-256), the public key and the
+value. It covers the whole BOM in the canonical form of RFC 8785, so any later change breaks it. The private key stays
+in the Windows key store of the author's account and cannot be exported; only the public key is in the repository. The
+signing tool is the one of the author's ProjectPlanner; its path can be set with `COVERAGEREPORT_SBOM_SIGNER`. Where the
+tool or the key is missing, the build only warns, and the SBOM stays unsigned.
+
+Recipients verify with the public key in the repository, whose fingerprint (RFC 7638, SHA-256) is
+`U5m-gxj8T4-09vUwB4Wz4qbtJPzQDcZnHsH9eaT1KO8`:
+
+```
+dotnet run SignSbom.cs -- verify sbom\coveragereport.cdx.json sbom\sbom-signing-key.jwk.json
+```
+
+Any JSF-capable tool works as well; it has to verify ES256 over the RFC 8785 form of the BOM without the signature's
+`value`.
+
 ## Tests
 
 ```
